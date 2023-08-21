@@ -1,6 +1,9 @@
 
 # Common
 
+# we only need boost for websocketpp
+find_package(Boost REQUIRED)
+
 set(CMAKE_CXX_STANDARD 11)
 
 set(COMMON_SOURCES
@@ -33,6 +36,9 @@ else()
     target_link_libraries(anim_client glfw)
     add_subdirectory(libs/glew)
     target_link_libraries(anim_client libglew_static)
+    target_include_directories(anim_client PRIVATE libs/websock)
+    target_link_libraries(anim_client ${Boost_LIBRARIES})
+    target_include_directories(anim_client PRIVATE ${Boost_INCLUDE_DIR})
 endif()
 
 # Server
@@ -43,3 +49,6 @@ add_executable(anim_server
     src/server/main.cpp
     ${COMMON_SOURCES})
 
+target_include_directories(anim_server PRIVATE libs/websock)
+target_link_libraries(anim_server ${Boost_LIBRARIES})
+target_include_directories(anim_server PRIVATE ${Boost_INCLUDE_DIR})

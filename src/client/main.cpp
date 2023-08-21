@@ -40,8 +40,8 @@ class Client : public App {
             }
         )");
 
-        sock.init("127.0.0.1", 2000);
-        sockKilled = false;
+        sock.init("ws://localhost:2000");
+        killedSock = false;
     }
 
     void tick(float dt) {
@@ -52,13 +52,13 @@ class Client : public App {
         shader.use();
         mesh.render();
 
-        if(glfwGetTime() > 3.0f && !sockKilled) {
-            sockKilled = true;
+        if(glfwGetTime() > 3 && !killedSock) {
+            killedSock = true; 
             sock.free();
         }
-        if(!sockKilled) {
+        if(!killedSock) {
             if(sock.ready())
-                sock.send((void*)"Hello", 6);
+                sock.send((void*)"Hel\0lo", 6);
             
             SocketMsg msg = sock.nextMsg();
             if(msg.valid()) {
@@ -71,7 +71,7 @@ class Client : public App {
     Mesh mesh;
     Shader shader;
     Socket sock;
-    bool sockKilled;
+    bool killedSock;
 
 };
 

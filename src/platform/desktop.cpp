@@ -4,6 +4,10 @@
 #include "../common/common.h"
 #include "common.h"
 
+using websocketpp::lib::placeholders::_1;
+using websocketpp::lib::placeholders::_2;
+using websocketpp::lib::bind;
+
 void runApp(App* app) {
 
     ASSERT(glfwInit(), "Could not init GLFW")
@@ -49,72 +53,91 @@ bool SocketMsg::valid() {
     return data != NULL;
 }
 
-void socketReadThread(bool* die, sockpp::tcp_socket sock, Arr<SocketMsg>* msgs, std::mutex* msgMutex) {
-    sock.set_non_blocking(true);
-    char buf[2048];
-    while(!*die) {
-        ssize_t n = sock.read(buf, 2048);
-        if(n > 0) {
-            SocketMsg msg;
-            msg.size = n;
-            msg.data = malloc(n);
-            memcpy(msg.data, buf, n);
-            msgMutex->lock();
-            msgs->add(msg);
-            msgMutex->unlock();
-        }
-    }
+void socketOpenHandler(SocketData* sock, websocketpp::connection_hdl hdl) {
+    sock->mutex.lock();
+    sock->server = hdl;
+    sock->ready = true;
+    sock->mutex.unlock();
 }
 
-bool Socket::init(const char* url, int port) {
-    sock = new sockpp::tcp_connector();
-    if(!sock->connect(sockpp::inet_address(url, port))) {
+void socketMsgHandler(SocketData* sock, websocketpp::connection_hdl hdl, MsgPtr msgPtr) {
+    SocketMsg msg;
+    msg.size = msgPtr->get_payload().length();
+    msg.data = malloc(msg.size);
+    memcpy(msg.data, msgPtr->get_payload().c_str(), msg.size);
+
+    sock->mutex.lock();
+    sock->msgs->add(msg); 
+    sock->mutex.unlock();
+}
+
+void socketThreadCode(SocketData* sock) {
+    sock->mutex.lock();
+    WSClient* client = &sock->sock; 
+    sock->mutex.unlock();
+    client->run();
+}
+
+bool Socket::init(const char* url) {
+    sock = new SocketData();
+    msgs = (Arr<SocketMsg>*)malloc(sizeof(Arr<SocketMsg>));
+    msgs->init();
+    sock->msgs = msgs;
+    sock->sock.init_asio();
+    sock->sock.set_open_handler(bind(socketOpenHandler, sock, ::_1));
+    sock->sock.set_message_handler(bind(socketMsgHandler, sock, ::_1, ::_2));
+    websocketpp::lib::error_code ec;
+    WSClient::connection_ptr con = sock->sock.get_connection(url, ec);
+    if(ec) {
         delete sock;
         sock = NULL;
         return false;
     }
-    msgs = (Arr<SocketMsg>*)malloc(sizeof(Arr<SocketMsg>));
-    msgs->init();
-
-    killThread = (bool*)malloc(sizeof(bool));
-    *killThread = false;
-
-    msgMutex = new std::mutex(); 
-
-    std::thread t(socketReadThread, killThread, std::move(sock->clone()), msgs, msgMutex);
-    readThread = std::move(t);
+    sock->sock.connect(con);
+    std::thread t(socketThreadCode, sock); 
+    sockThread = std::move(t);
 
     return true;
 }
 
 bool Socket::ready() {
-    return sock != NULL;
+    if(sock == NULL)
+        return false;
+    sock->mutex.lock();
+    bool res = sock->ready;
+    sock->mutex.unlock();
+    return res;
 }
 
 void Socket::free() {
-    *killThread = true;
-    readThread.join();
-    delete sock;
-    sock = NULL;
+    while(!ready());
+    sock->mutex.lock();
+    websocketpp::lib::error_code ec;
+    sock->sock.stop();
+    sock->sock.close(sock->server, 2000, "B'bye", ec);
+    sock->mutex.unlock();
+    sockThread.join();
+    delete sock; 
     msgs->free();
     std::free(msgs);
-    std::free(killThread);
-    delete msgMutex;
 }
 
 void Socket::send(void* data, size_t size) {
-    sock->write(data, size);
+    while(!ready());
+    sock->mutex.lock();
+    sock->sock.send(sock->server, data, size, websocketpp::frame::opcode::BINARY);
+    sock->mutex.unlock();
 }
 
 SocketMsg Socket::nextMsg() {
-    msgMutex->lock(); 
+    sock->mutex.lock();
     if(msgs->cnt() > 0) {
         SocketMsg msg = msgs->at(msgs->cnt() - 1);
         msgs->pop();
-        msgMutex->unlock();
+        sock->mutex.unlock();
         return msg;
     }
-    msgMutex->unlock();
+    sock->mutex.unlock();
     SocketMsg msg;
     msg.data = NULL;
     return msg;

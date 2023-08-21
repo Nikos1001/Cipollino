@@ -77,13 +77,11 @@ EM_BOOL socketMsgCallback(int eventType, const EmscriptenWebSocketMessageEvent* 
 	return true;
 }
 
-bool Socket::init(const char* url, int port) {
-	char buf[strlen(url) + 10];
-	sprintf(buf, "ws://%s", url); // IMPORTANT TODO: USE WSS!!!!
+bool Socket::init(const char* url) {
 	EmscriptenWebSocketCreateAttributes attribs;
-	attribs.url = buf;
-	attribs.protocols = "binary";
+	attribs.url = url;
 	attribs.createOnMainThread = true;
+	attribs.protocols = NULL;
 	sock = emscripten_websocket_new(&attribs);
 	if(sock <= 0)
 		return false;

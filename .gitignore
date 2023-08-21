@@ -2,3 +2,4 @@
 build/
 web-build/
 .vscode/
+**/.DS_Store

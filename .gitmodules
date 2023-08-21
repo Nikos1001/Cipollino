@@ -7,3 +7,6 @@
 [submodule "libs/imgui"]
 	path = libs/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "libs/websock"]
+	path = libs/websock
+	url = https://github.com/zaphoyd/websocketpp.git
