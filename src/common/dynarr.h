@@ -2,8 +2,7 @@
 #ifndef DYNARR_H
 #define DYNARR_H
 
-#include <cstdlib>
-
+#include "common.h"
 template<typename T>
 class Arr {
 public:
@@ -15,15 +14,15 @@ public:
     }
 
     void free() {
-        std::free((void*)elems);
+        anim::free((void*)elems, cap * sizeof(T));
     }
 
-    int add(T elem) {
+    int add(const T& elem) {
         size++;
         if(size > cap) {
             grow();
         }
-        this->elems[size - 1] = elem;
+        memcpy(&this->elems[size - 1], &elem, sizeof(T));
         return size - 1;
     }
 
@@ -69,7 +68,7 @@ private:
     
     void grow() {
         int newCap = cap == 0 ? 8 : cap * 2; 
-        elems = (T*)realloc(elems, newCap * sizeof(T));
+        elems = (T*)anim::realloc(elems, cap * sizeof(T), newCap * sizeof(T));
         cap = newCap;
     }
 

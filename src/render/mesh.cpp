@@ -37,9 +37,17 @@ void Mesh::upload() {
 
 void Mesh::render() {
     glBindVertexArray(vao);
-    configAttribs();  
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    configAttribs();
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glDrawElements(GL_TRIANGLES, tris * 3, GL_UNSIGNED_INT, 0);
+    if(tris > 0)
+        glDrawElements(GL_TRIANGLES, tris * 3, GL_UNSIGNED_INT, 0);
+}
+
+void Mesh::free() {
+    glDeleteVertexArrays(1, &vao);
+    glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &ebo);
 }
 
 void Mesh::configAttribs() {

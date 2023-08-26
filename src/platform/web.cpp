@@ -4,6 +4,34 @@
 #include "../common/common.h"
 #include "common.h"
 
+#include <cstdlib>
+
+EM_JS(void, setLocalStorage, (const char* name, const char* data), {
+	localStorage.setItem(UTF8ToString(name), UTF8ToString(data));
+});
+
+EM_JS(const char*, getLocalStorage, (const char* name), {
+	const data = localStorage.getItem(UTF8ToString(name));
+	if(data == null)
+		return null;
+	return stringToNewUTF8(data);
+});
+
+void App::saveSetting(const char* name, const char* data) {
+	setLocalStorage(name, data);
+}
+
+const char* App::loadSetting(const char* name) {
+	const char* data = getLocalStorage(name);
+	if(data == NULL)
+		return NULL; 
+	// copy is needed to use anim
+	char* dataCpy = (char*)anim::malloc(strlen(data) + 1);
+	strcpy(dataCpy, data);
+	std::free((void*)data);
+	return dataCpy;
+}
+
 EM_JS(int, getCanvasWidth, (), {
   return Module.canvas.clientWidth;
 });
@@ -26,6 +54,8 @@ void loop() {
         w = currW;
         h = currH;
         glfwSetWindowSize(app->win, w, h);
+		glViewport(0, 0, w, h);
+		glfwMakeContextCurrent(app->win);
     }
 
     imguiNewFrame();
@@ -59,19 +89,12 @@ void runApp(App* app_) {
     emscripten_set_main_loop(loop, 0, 1);
 }
 
-void SocketMsg::free() {
-	std::free(data);
-}
-
-bool SocketMsg::valid() {
-	return data != NULL;
-}
-
 EM_BOOL socketMsgCallback(int eventType, const EmscriptenWebSocketMessageEvent* event, void* usrData) {
 	Arr<SocketMsg>* msgs = (Arr<SocketMsg>*)usrData;
 	SocketMsg msg;
+	msg.init();
 	msg.size = event->numBytes;
-	msg.data = malloc(msg.size);
+	msg.data = anim::malloc(msg.size);
 	memcpy(msg.data, event->data, msg.size);
 	msgs->add(msg);
 	return true;
@@ -85,7 +108,7 @@ bool Socket::init(const char* url) {
 	sock = emscripten_websocket_new(&attribs);
 	if(sock <= 0)
 		return false;
-	msgs = (Arr<SocketMsg>*)malloc(sizeof(Arr<SocketMsg>));
+	msgs = (Arr<SocketMsg>*)anim::malloc(sizeof(Arr<SocketMsg>));
 	msgs->init();
 	EMSCRIPTEN_RESULT res = emscripten_websocket_set_onmessage_callback(sock, (void*)msgs, socketMsgCallback);
 	return true;
@@ -100,7 +123,7 @@ bool Socket::ready() {
 void Socket::free() {
 	emscripten_websocket_close(sock, 1000, "b'bye");
 	msgs->free();
-	std::free(msgs);
+	anim::free(msgs, sizeof(Arr<SocketMsg>));
 }
 
 void Socket::send(void* data, size_t size) {
@@ -109,11 +132,11 @@ void Socket::send(void* data, size_t size) {
 
 SocketMsg Socket::nextMsg() {
 	if(msgs->cnt() > 0) {
-		SocketMsg msg = msgs->at(msgs->cnt() - 1);
-		msgs->pop();
+		SocketMsg msg = msgs->at(0);
+		msgs->removeAt(0);
 		return msg;
 	}
 	SocketMsg msg;
-	msg.data = NULL;
+	msg.init();
 	return msg;
 }

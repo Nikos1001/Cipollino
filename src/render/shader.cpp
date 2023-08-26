@@ -20,8 +20,10 @@ unsigned int makeShader(const char* src, bool frag) {
 
 void Shader::init(const char* vertSrc, const char* fragSrc) {
     program = glCreateProgram();
-    glAttachShader(program, makeShader(vertSrc, false));
-    glAttachShader(program, makeShader(fragSrc, true));
+    unsigned int vertShader = makeShader(vertSrc, false);
+    unsigned int fragShader = makeShader(fragSrc, true);
+    glAttachShader(program, vertShader);
+    glAttachShader(program, fragShader);
     glLinkProgram(program);
 
     int success;
@@ -32,8 +34,19 @@ void Shader::init(const char* vertSrc, const char* fragSrc) {
         errPrint("Shader linking error:\n%s", log);
         ASSERT(false, "Fix the shader pls");
     }
+
+    glDeleteShader(vertShader);
+    glDeleteShader(fragShader);
+}
+
+void Shader::free() {
+    glDeleteProgram(program);
 }
 
 void Shader::use() {
     glUseProgram(program);
+}
+
+void Shader::setMat4(const char* name, glm::mat4 val) {
+    glUniformMatrix4fv(glGetUniformLocation(program, name), 1, false, glm::value_ptr(val));
 }

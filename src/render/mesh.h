@@ -4,11 +4,15 @@
 
 #define MAX_NUM_ATTRIBS 16
 
+class MeshBuilder;
+
 class Mesh {
+friend class MeshBuilder;
 public:
     void init(int nAttribs, int* attribSize);
     void upload();
     void render();
+    void free();
 
     int verts;
     float* vertData;

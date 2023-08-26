@@ -4,6 +4,8 @@
 
 #include "opengl.h"
 #include "../common/dynarr.h"
+#include "../common/common.h"
+#include "../protocol/msg.h"
 
 #ifndef __EMSCRIPTEN__
 #include <websocketpp/config/asio_no_tls_client.hpp>
@@ -20,19 +22,18 @@ class App {
 public:
     virtual void init() {}
     virtual void tick(float dt) {}
+    virtual void free() {}
 
-    GLFWwindow* win;    
+    GLFWwindow* win;
+    int getW();
+    int getH();
+    glm::vec2 getMousePos(); 
+
+    void saveSetting(const char* name, const char* data);
+    const char* loadSetting(const char* name);
 };
 
 void runApp(App* app);
-
-class SocketMsg {
-public:
-    void free();
-    bool valid();
-    size_t size;
-    void* data;
-};
 
 #ifndef __EMSCRIPTEN__
 struct SocketData {
@@ -60,7 +61,7 @@ private:
 #else
     EMSCRIPTEN_WEBSOCKET_T sock;
 #endif
-    Arr<SocketMsg>* msgs; 
+    Arr<SocketMsg>* msgs; // TODO: change to queue 
 };
 
 #endif
