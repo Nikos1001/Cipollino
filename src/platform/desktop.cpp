@@ -10,7 +10,7 @@ using websocketpp::lib::bind;
 
 static void getSettingPath(char* buf, int size, const char* name) {
     // TODO: platforms besides macos exist!
-    snprintf(buf, size, "%s/Library/Application Support/Gramazeka/settings/%s.txt", getenv("HOME"), name);
+    snprintf(buf, size, "%s/Library/Application Support/Cipollino/settings/%s.txt", getenv("HOME"), name);
     for(char* c = buf + 1; *c != '\0'; c++) {
         if(*c == '/') {
             char next = c[1];
@@ -56,7 +56,7 @@ void runApp(App* app) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    app->win = glfwCreateWindow(1280, 720, "Gramazeka", NULL, NULL);
+    app->win = glfwCreateWindow(1280, 720, "Cipollino", NULL, NULL);
     ASSERT(app->win != NULL, "Could not create GLFW window")
     glfwMakeContextCurrent(app->win);
 
