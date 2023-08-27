@@ -21,7 +21,7 @@ set(CLIENT_SOURCES
         src/client/main.cpp src/client/editor.cpp src/client/tool.cpp src/client/panel.cpp
         ${COMMON_SOURCES}
         src/platform/common.cpp
-        src/render/mesh.cpp src/render/shader.cpp src/render/builder.cpp src/render/framebuffer.cpp src/render/scene.cpp
+        src/render/mesh.cpp src/render/shader.cpp src/render/builder.cpp src/render/framebuffer.cpp src/render/scene.cpp src/render/camera.cpp
         src/client/keychain.cpp
         src/client/action.cpp
         libs/imgui/imgui_demo.cpp

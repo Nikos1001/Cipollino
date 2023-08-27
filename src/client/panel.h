@@ -4,6 +4,8 @@
 
 #include "../common/dynarr.h"
 #include "../render/framebuffer.h"
+#include "../render/camera.h"
+
 class Editor;
 
 enum PanelType {
@@ -15,7 +17,7 @@ enum PanelType {
 
 class Panel {
 public:
-    void init(int key) {
+    virtual void init(int key) {
         this->key = key;
     }
 
@@ -52,6 +54,7 @@ public:
 private:
     Framebuffer fb;
     bool prevMouseInsideViewport;
+    Camera cam;
 };
 
 class DebugPanel : public Panel {

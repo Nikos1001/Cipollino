@@ -30,14 +30,14 @@ void SceneRenderer::free() {
     strokeShader.free();
 }
 
-void SceneRenderer::render(int w, int h, Project* proj, Framebuffer* fb) {
+void SceneRenderer::render(int w, int h, Project* proj, Framebuffer* fb, Camera* cam) {
     fb->resize(w, h);
     fb->renderTo();
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     float aspect = (float)w / (float)h;
     strokeShader.use();
-    glm::mat4 trans = glm::ortho(-5.0f * aspect, 5.0f * aspect, -5.0f, 5.0f, -1.0f, 1.0f);
+    glm::mat4 trans = cam->projView(aspect); 
     strokeShader.setMat4("uTrans", trans);
     for(int i = 0; i < proj->strokes.cnt(); i++) {
         Stroke* s = &proj->strokes[i];
