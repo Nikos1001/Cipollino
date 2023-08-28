@@ -2,6 +2,8 @@
 #ifndef STROKE
 #define STROKE
 
+#include "../protocol/msg.h"
+
 #ifndef SERVER
 #include "../render/mesh.h"
 #endif

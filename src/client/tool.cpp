@@ -4,24 +4,25 @@
 
 class PencilUndo : public Action {
 public:
-    void init(Key stroke);
+    void init(Key graphic, Key stroke);
     void free();
     Action* perform(Editor* editor);
 private:
-    Key stroke;
+    Key graphic, stroke;
 };
 
 class PencilRedo : public Action {
 public:
-    void init(Editor* editor, Key strokeKey);
+    void init(Editor* editor, Key graphic, Key strokeKey);
     void free();
     Action* perform(Editor* editor);
 private:
     Arr<glm::vec2> pts;
-    Key stroke;
+    Key graphic, stroke;
 };
 
-void PencilUndo::init(Key stroke) {
+void PencilUndo::init(Key graphic, Key stroke) {
+    this->graphic = graphic;
     this->stroke = stroke;
 }
 
@@ -31,20 +32,21 @@ void PencilUndo::free() {
 
 Action* PencilUndo::perform(Editor* editor) {
     PencilRedo* redo = new PencilRedo();
-    redo->init(editor, stroke);
+    redo->init(editor, graphic, stroke);
 
     MsgWriter msg;
     msg.init();
-    editor->proj.deleteStroke(stroke, &msg);
+    editor->proj.deleteStroke(graphic, stroke, &msg);
     editor->sock->send(msg.getData(), msg.getSize());
     msg.free();
 
     return (Action*)redo;
 }
 
-void PencilRedo::init(Editor* editor, Key strokeKey) {
+void PencilRedo::init(Editor* editor, Key graphic, Key strokeKey) {
+    this->graphic = graphic;
     pts.init();
-    Stroke* s = editor->proj.getStroke(strokeKey);
+    Stroke* s = editor->proj.getGraphic(graphic)->getStroke(strokeKey);
     for(int i = 0; i < s->points.cnt(); i++) {
         pts.add(s->points[i].pt);
     } 
@@ -59,7 +61,7 @@ Action* PencilRedo::perform(Editor* editor) {
     MsgWriter msg;
     msg.init();
     stroke = editor->keys.nextKey();
-    editor->proj.addStroke(stroke, &msg);
+    editor->proj.addStroke(graphic, stroke, &msg);
     editor->sock->send(msg.getData(), msg.getSize());
     msg.free();
 
@@ -68,13 +70,13 @@ Action* PencilRedo::perform(Editor* editor) {
         if(pt == NULL_KEY)
             break;
         msg.init();
-        editor->proj.addPointToStroke(pt, stroke, pts[i], &msg);
+        editor->proj.addPointToStroke(pt, graphic, stroke, pts[i], &msg);
         editor->sock->send(msg.getData(), msg.getSize());
         msg.free();
     }
     
     PencilUndo* undo = new PencilUndo();
-    undo->init(stroke);
+    undo->init(graphic, stroke);
     return undo;
 }
 
@@ -88,7 +90,7 @@ void Pencil::mouseClick(Editor* editor, glm::vec2 pos) {
     MsgWriter msg;
     msg.init();
     Key k = editor->keys.nextKey();
-    editor->proj.addStroke(k, &msg);
+    editor->proj.addStroke(k, editor->openGraphic, &msg);
     editor->sock->send(msg.getData(), msg.getSize());
     msg.free();
     currStroke = k; 
@@ -96,7 +98,7 @@ void Pencil::mouseClick(Editor* editor, glm::vec2 pos) {
     MsgWriter msg2;
     msg2.init();
     Key ptKey = editor->keys.nextKey();
-    editor->proj.addPointToStroke(ptKey, k, pos, &msg2);
+    editor->proj.addPointToStroke(ptKey, editor->openGraphic, k, pos, &msg2);
     editor->sock->send(msg2.getData(), msg2.getSize());
     msg2.free();
 }
@@ -105,7 +107,7 @@ void Pencil::mouseDown(Editor* editor, glm::vec2 pos) {
     if(currStroke == NULL_KEY)
         return;
 
-    Stroke* s = editor->proj.getStroke(currStroke);
+    Stroke* s = editor->proj.getGraphic(editor->openGraphic)->getStroke(currStroke);
     bool newPoint = false;
     if(s->points.cnt() >= 3) {
         // this basically ensures that new points are only added
@@ -127,14 +129,14 @@ void Pencil::mouseDown(Editor* editor, glm::vec2 pos) {
         MsgWriter msg;
         msg.init();
         Key k = editor->keys.nextKey();
-        editor->proj.addPointToStroke(k, currStroke, pos, &msg);
+        editor->proj.addPointToStroke(k, editor->openGraphic, currStroke, pos, &msg);
         editor->sock->send(msg.getData(), msg.getSize());
         msg.free();
     }
 
     MsgWriter msg;
     msg.init();
-    editor->proj.movePoint(s->key, s->points[s->points.cnt() - 1].key, pos, &msg);
+    editor->proj.movePoint(editor->openGraphic, s->key, s->points[s->points.cnt() - 1].key, pos, &msg);
     editor->sock->send(msg.getData(), msg.getSize());
     msg.free();
 }
@@ -142,7 +144,7 @@ void Pencil::mouseDown(Editor* editor, glm::vec2 pos) {
 void Pencil::mouseRelease(Editor* editor, glm::vec2 pos) {
     if(currStroke != NULL_KEY) {
         PencilUndo* undo = new PencilUndo();
-        undo->init(currStroke);
+        undo->init(editor->openGraphic, currStroke);
         editor->acts.addUndo(undo);
     }
     currStroke = NULL_KEY;

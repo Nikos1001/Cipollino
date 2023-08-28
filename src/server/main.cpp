@@ -11,14 +11,12 @@ int main() {
 
     Project proj;
     proj.init();
-    Stroke s;
-    s.init(0);
-    Point pt;
-    pt.init(1, glm::vec2(0.0f, 0.0f));
-    s.points.add(pt);
-    pt.init(2, glm::vec2(1.0f, 0.0f));
-    s.points.add(pt);
-    proj.strokes.add(s);
+    Graphic g;
+    g.init(0);
+    proj.graphics.add(g);
+    Graphic g2;
+    g2.init(1);
+    proj.graphics.add(g2);
 
     Server server;
     if(!server.init(2000)) {

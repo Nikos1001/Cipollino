@@ -8,9 +8,15 @@
 
 class Editor;
 
+#define PANEL_X \
+    X(Scene, SCENE) \
+    X(Assets, ASSETS) \
+    X(Debug, DEBUG)
+
 enum PanelType {
-    SCENE,
-    DEBUG,
+#define X(name, enumName) enumName,
+    PANEL_X
+#undef X
 
     NONE
 };
@@ -42,28 +48,6 @@ private:
     bool addPanelWithKey(PanelType type, int key);
     int currKey;
     Arr<Panel*> panels;
-};
-
-class ScenePanel : public Panel {
-public:
-    void init(int key);
-    void free();
-    void tick(Editor* editor, float dt);
-    const char* getName();
-    size_t getSize();
-private:
-    Framebuffer fb;
-    bool prevMouseInsideViewport;
-    Camera cam;
-};
-
-class DebugPanel : public Panel {
-public:
-    void init(int key);
-    void free();
-    void tick(Editor* editor, float dt);
-    const char* getName();
-    size_t getSize();
 };
 
 #endif

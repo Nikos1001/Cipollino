@@ -14,11 +14,12 @@ void Editor::init(Socket* sock, App* app) {
 
     sceneRndr.init();
 
-    pencil.init();
-    currTool = &pencil;
-
     panels.init();
     panels.loadSettings(this);
+
+    pencil.init();
+    currTool = &pencil;
+    openGraphic = NULL_KEY;
 
 }
 
@@ -34,10 +35,11 @@ void Editor::tick(float dt) {
         }
         if(ImGui::BeginMenu("View")) {
             if(ImGui::BeginMenu("Add panel")) {
-                if(ImGui::MenuItem("Scene"))
-                    panels.addPanel(SCENE);
-                if(ImGui::MenuItem("Debug"))
-                    panels.addPanel(DEBUG);
+                #define X(name, enumName) \
+                    if(ImGui::MenuItem(#name)) \
+                        panels.addPanel(PanelType::enumName);
+                PANEL_X
+                #undef X
                 ImGui::EndMenu();
             }
             ImGui::EndMenu();

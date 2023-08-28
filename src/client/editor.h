@@ -18,19 +18,22 @@ public:
     void handleMsg(SocketMsg* msg, uint8_t msgType);
     void free();
 
+    // Editor systems
+
     KeyChain keys;
     Project proj;
     Socket* sock;
     App* app;
-
     ActionManager acts;
-
     SceneRenderer sceneRndr;
+    PanelManager panels;    
+
+    // Global editor data
 
     Pencil pencil;
     Tool* currTool;
 
-    PanelManager panels;    
+    Key openGraphic;
 
 private:
     bool sentGet;

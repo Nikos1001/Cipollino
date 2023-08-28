@@ -12,7 +12,7 @@ public:
     void init();
     void free();
 
-    void render(int w, int h, Project* proj, Framebuffer* fb, Camera* cam);
+    void render(Project* proj, Key graphicKey, int w, int h, Framebuffer* fb, Camera* cam);
 private:
     Shader strokeShader;
 };

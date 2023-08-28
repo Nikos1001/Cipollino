@@ -7,7 +7,7 @@ find_package(Boost REQUIRED)
 set(CMAKE_CXX_STANDARD 11)
 
 set(COMMON_SOURCES
-        src/project/project.cpp src/project/stroke.cpp
+        src/project/project.cpp src/project/stroke.cpp src/project/graphic.cpp
         src/protocol/msg.cpp
         src/common/common.cpp src/common/scanner.cpp)
 
@@ -19,6 +19,7 @@ project(anim_client)
 
 set(CLIENT_SOURCES
         src/client/main.cpp src/client/editor.cpp src/client/tool.cpp src/client/panel.cpp
+        src/client/panels/scene.cpp src/client/panels/assets.cpp src/client/panels/debug.cpp
         ${COMMON_SOURCES}
         src/platform/common.cpp
         src/render/mesh.cpp src/render/shader.cpp src/render/builder.cpp src/render/framebuffer.cpp src/render/scene.cpp src/render/camera.cpp

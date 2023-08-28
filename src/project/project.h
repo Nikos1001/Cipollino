@@ -7,7 +7,7 @@
 
 #include "../protocol/msg.h"
 
-#include "stroke.h"
+#include "graphic.h"
 
 enum UpdateType {
     // updating
@@ -27,18 +27,16 @@ public:
     void loadFrom(SocketMsg* msg);
     void writeTo(MsgWriter* msg);
 
-    void movePoint(Key strokeKey, Key pointKey, glm::vec2 pt, MsgWriter* msg = NULL);
-    void deleteStroke(Key strokeKey, MsgWriter* msg = NULL);
+    void movePoint(Key graphicKey, Key strokeKey, Key pointKey, glm::vec2 pt, MsgWriter* msg = NULL);
+    void deleteStroke(Key graphicKey, Key strokeKey, MsgWriter* msg = NULL);
     void applyUpdate(SocketMsg* msg);
 
-    void addStroke(Key key, MsgWriter* msg = NULL);
-    void addPointToStroke(Key key, Key strokeKey, glm::vec2 pt, MsgWriter* msg = NULL);
+    void addStroke(Key key, Key graphicKey, MsgWriter* msg = NULL);
+    void addPointToStroke(Key key, Key graphicKey, Key strokeKey, glm::vec2 pt, MsgWriter* msg = NULL);
     void applyAddUpdate(SocketMsg* msg, Key key);
 
-    Arr<Stroke> strokes;
-    Stroke* getStroke(Key key);
-    int getStrokeIdx(Key key);
-
+    Arr<Graphic> graphics;
+    Graphic* getGraphic(Key key);
 };
 
 #endif

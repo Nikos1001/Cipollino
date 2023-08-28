@@ -30,7 +30,7 @@ void SceneRenderer::free() {
     strokeShader.free();
 }
 
-void SceneRenderer::render(int w, int h, Project* proj, Framebuffer* fb, Camera* cam) {
+void SceneRenderer::render(Project* proj, Key graphicKey, int w, int h, Framebuffer* fb, Camera* cam) {
     fb->resize(w, h);
     fb->renderTo();
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -39,8 +39,12 @@ void SceneRenderer::render(int w, int h, Project* proj, Framebuffer* fb, Camera*
     strokeShader.use();
     glm::mat4 trans = cam->projView(aspect); 
     strokeShader.setMat4("uTrans", trans);
-    for(int i = 0; i < proj->strokes.cnt(); i++) {
-        Stroke* s = &proj->strokes[i];
-        s->mesh.render();
+    
+    Graphic* g = proj->getGraphic(graphicKey);
+    if(g != NULL) {
+        for(int i = 0; i < g->strokes.cnt(); i++) {
+            Stroke* s = &g->strokes[i];
+            s->mesh.render();
+        }
     }
 }
