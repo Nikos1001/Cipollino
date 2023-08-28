@@ -7,28 +7,69 @@
 
 class Client : public App {
     void init() {
-
-        sock.init("ws://localhost:2000");
-        editor.init(&sock, this);
+        runEditor = false;
+        host[0] = '\0';
+        
+        const char* savedHost = loadSetting("host");
+        if(savedHost != NULL) {
+            strncpy(host, savedHost, 256);
+        }
     }
 
     void tick(float dt) {
 
-        editor.tick(dt);
+        if(runEditor) {
+            editor.tick(dt);
 
-        SocketMsg msg = sock.nextMsg();
-        while(msg.valid()) {
-            uint8_t msgType = msg.readU8();
-            editor.handleMsg(&msg, msgType); 
-            msg.free();
-            msg = sock.nextMsg();
+            SocketMsg msg = sock.nextMsg();
+            while(msg.valid()) {
+                uint8_t msgType = msg.readU8();
+                editor.handleMsg(&msg, msgType); 
+                msg.free();
+                msg = sock.nextMsg();
+            }
+
+            if(!sock.ready()) {
+                editor.free();
+                runEditor = false;
+                sock.free();
+                initedSock = false;
+            }
+        } else {
+            ImGui::OpenPopup("Connect to server");
+            ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+            ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+            if(ImGui::BeginPopupModal("Connect to server", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("Host:");
+                ImGui::SameLine();
+                ImGui::InputText("##host", host, 256);
+                if(ImGui::Button("Connect")) {
+                    if(initedSock)
+                        sock.free();
+                    sock.init(host);
+                    initedSock = true;
+                }
+                if(initedSock && sock.ready()) {
+                    editor.init(&sock, this);
+                    runEditor = true;
+                }
+                ImGui::EndPopup();
+            }
+
+            saveSetting("host", host);
         }
+
     }
 
     void free() {
-        sock.free();
+        if(initedSock)
+            sock.free();
     }
 
+    char host[256];
+
+    bool runEditor;
+    bool initedSock;
     Socket sock;
     Editor editor;
 

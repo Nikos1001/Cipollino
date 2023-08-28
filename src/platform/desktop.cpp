@@ -95,6 +95,12 @@ void socketOpenHandler(SocketData* sock, websocketpp::connection_hdl hdl) {
     sock->mutex.unlock();
 }
 
+void socketCloseHandler(SocketData* sock, websocketpp::connection_hdl hdl) {
+    sock->mutex.lock();
+    sock->ready = false;
+    sock->mutex.unlock();
+}
+
 void socketMsgHandler(SocketData* sock, websocketpp::connection_hdl hdl, MsgPtr msgPtr) {
     SocketMsg msg;
     msg.init();
@@ -122,6 +128,7 @@ bool Socket::init(const char* url) {
     sock->sock.init_asio();
     sock->sock.clear_access_channels(websocketpp::log::alevel::all);
     sock->sock.set_open_handler(bind(socketOpenHandler, sock, ::_1));
+    sock->sock.set_close_handler(bind(socketCloseHandler, sock, ::_1));
     sock->sock.set_message_handler(bind(socketMsgHandler, sock, ::_1, ::_2));
     websocketpp::lib::error_code ec;
     WSClient::connection_ptr con = sock->sock.get_connection(url, ec);
@@ -147,7 +154,6 @@ bool Socket::ready() {
 }
 
 void Socket::free() {
-    while(!ready());
     sock->mutex.lock();
     websocketpp::lib::error_code ec;
     sock->sock.stop();
