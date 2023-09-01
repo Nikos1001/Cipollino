@@ -30,7 +30,7 @@ void SceneRenderer::free() {
     strokeShader.free();
 }
 
-void SceneRenderer::render(Project* proj, Key graphicKey, int w, int h, Framebuffer* fb, Camera* cam) {
+void SceneRenderer::render(Project* proj, Key graphicKey, int w, int h, Framebuffer* fb, Camera* cam, int frame) {
     fb->resize(w, h);
     fb->renderTo();
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -42,9 +42,16 @@ void SceneRenderer::render(Project* proj, Key graphicKey, int w, int h, Framebuf
     
     Graphic* g = proj->getGraphic(graphicKey);
     if(g != NULL) {
-        for(int i = 0; i < g->strokes.cnt(); i++) {
-            Stroke* s = &g->strokes[i];
-            s->mesh.render();
+        for(int i = 0; i < g->layers.cnt(); i++) {
+            Layer* l = proj->getLayer(g->layers[i]);
+            Frame* f = l->getFrameAt(proj, frame);
+            if(f != NULL) {
+                for(int j = 0; j < f->strokes.cnt(); j++) {
+                    Stroke* s = proj->getStroke(f->strokes[j]);
+                    if(s != NULL)
+                        s->mesh.render();
+                }
+            }
         }
     }
 }

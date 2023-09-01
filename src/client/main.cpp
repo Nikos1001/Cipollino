@@ -14,6 +14,8 @@ class Client : public App {
         if(savedHost != NULL) {
             strncpy(host, savedHost, 256);
         }
+
+        initedSock = false;
     }
 
     void tick(float dt) {

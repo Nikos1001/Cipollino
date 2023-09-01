@@ -4,6 +4,7 @@
 
 #include "../common/common.h"
 #include "../protocol/msg.h"
+#include "action.h"
 
 class Editor;
 
@@ -23,6 +24,7 @@ public:
     void mouseRelease(Editor* editor, glm::vec2 pos);
 private:
     Key currStroke;
+    EditorAction act;
 };
 
 #endif

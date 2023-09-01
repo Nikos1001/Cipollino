@@ -1,57 +1,69 @@
 
 #include "action.h"
+#include "editor.h"
+
+void EditorAction::init(Editor* editor) {
+    ProjectAction::init();
+    this->editor = editor;
+}
+
+void EditorAction::addOP(ProjectOP op) {
+    ProjectAction::addOP(op);
+    MsgWriter msg;
+    msg.init();
+    op.writeFwd(&msg, this);
+    editor->sock->send(msg.getData(), msg.getSize());
+    msg.free();
+}
+
+
 
 void ActionManager::init() {
-    undos.init();
-    redos.init();
+    acts.init();
+    currAct = -1;
 }
 
 void ActionManager::free() {
-    for(int i = 0; i < undos.cnt(); i++) {
-        freeAction(undos[i]);
-    }
-    undos.free();
-    for(int i = 0; i < redos.cnt(); i++) {
-        freeAction(redos[i]);
-    }
-    redos.free();
+    for(int i = 0; i < acts.cnt(); i++)
+        acts[i].free();
+    acts.free();
 }
 
-void ActionManager::addUndo(Action* undo) {
-    undos.add(undo);
-    for(int i = 0; i < redos.cnt(); i++) {
-        freeAction(redos[i]);
+void ActionManager::pushAction(EditorAction act) {
+    // TODO: use ring buffer
+    while(acts.cnt() > currAct + 1) {
+        acts[acts.cnt() - 1].free();
+        acts.pop(); 
     }
-    redos.clear();
-}
 
-void ActionManager::undo(Editor* editor) {
-    if(undos.cnt() == 0)
-        return;
-    Action* undo = undos[undos.cnt() - 1]; 
-    undos.pop();
-    redos.add(undo->perform(editor));
-    freeAction(undo);
-}
+    acts.add(act);
+    currAct++;
 
-void ActionManager::redo(Editor* editor) {
-    if(redos.cnt() == 0)
-        return;    
-    Action* redo = redos[redos.cnt() - 1];
-    redos.pop();
-    undos.add(redo->perform(editor));
-    freeAction(redo);
+    if(acts.cnt() > 32) {
+        acts[0].free();
+        acts.removeAt(0);
+        currAct--;
+    }
 }
 
 bool ActionManager::hasUndo() {
-    return undos.cnt() > 0;
+    return currAct >= 0;
+}
+
+void ActionManager::undo() {
+    if(!hasUndo())
+        return;
+    acts[currAct].undo();
+    currAct--;
 }
 
 bool ActionManager::hasRedo() {
-    return redos.cnt() > 0;
+    return currAct + 1 < acts.cnt();
 }
 
-void ActionManager::freeAction(Action* action) {
-    action->free();
-    delete action;
+void ActionManager::redo() {
+    if(!hasRedo())
+        return;
+    currAct++;
+    acts[currAct].redo();
 }

@@ -7,6 +7,7 @@
 
 #include "panels/scene.h"
 #include "panels/asset.h"
+#include "panels/timeline.h"
 #include "panels/debug.h"
 
 void Panel::render(Editor* editor, float dt) {

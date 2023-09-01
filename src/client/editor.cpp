@@ -8,8 +8,6 @@ void Editor::init(Socket* sock, App* app) {
     keys.init();
     proj.init();
 
-    acts.init();
-
     sentGet = false;
 
     sceneRndr.init();
@@ -17,9 +15,14 @@ void Editor::init(Socket* sock, App* app) {
     panels.init();
     panels.loadSettings(this);
 
+    acts.init();
+
     pencil.init();
     currTool = &pencil;
     openGraphic = NULL_KEY;
+    activeLayer = 0;
+
+    playing = false;
 
 }
 
@@ -28,9 +31,9 @@ void Editor::tick(float dt) {
     if(ImGui::BeginMainMenuBar()) {
         if(ImGui::BeginMenu("Edit")) {
             if(ImGui::MenuItem("Undo", "Ctrl Z", false, acts.hasUndo()))
-                acts.undo(this);
+                acts.undo(); 
             if(ImGui::MenuItem("Redo", "Ctrl Y", false, acts.hasRedo()))
-                acts.redo(this);
+                acts.redo();
             ImGui::EndMenu();
         }
         if(ImGui::BeginMenu("View")) {
@@ -47,11 +50,22 @@ void Editor::tick(float dt) {
         ImGui::EndMainMenuBar();
     }
 
-    if(ImGui::GetIO().KeyMods == ImGuiMod_Super) {
-        if(ImGui::IsKeyPressed(ImGuiKey_Z))
-            acts.undo(this);
-        if(ImGui::IsKeyPressed(ImGuiKey_Y))
-            acts.redo(this);
+    Graphic* g = getOpenGraphic();
+    if(g != NULL) {
+        if(activeLayer < 0)
+            activeLayer = 0;
+        if(activeLayer >= g->layers.cnt())
+            activeLayer = g->layers.cnt() - 1;
+    }
+
+    if(!ImGui::GetIO().WantTextInput && ImGui::GetIO().KeyMods == ImGuiMod_Super) {
+        if(ImGui::IsKeyPressed(ImGuiKey_Z, false))
+            acts.undo();
+        if(ImGui::IsKeyPressed(ImGuiKey_Y, false))
+            acts.redo();
+    }
+    if(!ImGui::GetIO().WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Space, false)) {
+        playing = !playing;
     }
 
     ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
@@ -75,6 +89,9 @@ void Editor::tick(float dt) {
         sock->send(&msg, sizeof(msg));
         sentGet = true;
     }
+
+    if(playing)
+        time += dt;
 
     panels.tick(this, dt);
     panels.saveSettings(this);
@@ -104,4 +121,19 @@ void Editor::free() {
     acts.free();
     sceneRndr.free();
     panels.free();
+}
+
+Graphic* Editor::getOpenGraphic() {
+    return proj.getGraphic(openGraphic);
+}
+
+Layer* Editor::getActiveLayer() {
+    Graphic* g = getOpenGraphic();
+    if(g == NULL)
+        return NULL;
+    return proj.getLayer(g->layers[activeLayer]);
+}
+
+int Editor::getFrame() {
+    return (int)(time / (1.0f / proj.fps));
 }

@@ -24,9 +24,9 @@ public:
     Project proj;
     Socket* sock;
     App* app;
-    ActionManager acts;
     SceneRenderer sceneRndr;
-    PanelManager panels;    
+    PanelManager panels;
+    ActionManager acts;
 
     // Global editor data
 
@@ -34,6 +34,15 @@ public:
     Tool* currTool;
 
     Key openGraphic;
+    int activeLayer;
+
+    Graphic* getOpenGraphic();
+    Layer* getActiveLayer();
+
+    float time;
+    bool playing;
+
+    int getFrame();
 
 private:
     bool sentGet;

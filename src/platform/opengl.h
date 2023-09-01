@@ -9,6 +9,7 @@
 #include "../../libs/glew/include/GL/glew.h"
 #endif
 #include "../../libs/glfw/include/GLFW/glfw3.h"
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "../../libs/imgui/imgui.h"
 #include "../../libs/imgui/imgui_internal.h"
 #include "../../libs/imgui/backends/imgui_impl_glfw.h"

@@ -11,6 +11,7 @@ class Editor;
 #define PANEL_X \
     X(Scene, SCENE) \
     X(Assets, ASSETS) \
+    X(Timeline, TIMELINE) \
     X(Debug, DEBUG)
 
 enum PanelType {

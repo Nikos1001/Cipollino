@@ -15,7 +15,8 @@ void ScenePanel::free() {
 }
 
 void ScenePanel::tick(Editor* editor, float dt) {
-    if(editor->proj.getGraphic(editor->openGraphic) != NULL) {
+    Graphic* g = editor->getOpenGraphic();
+    if(g != NULL) {
         int viewW = ImGui::GetContentRegionAvail().x;
         int viewH = ImGui::GetContentRegionAvail().y;
         glm::vec2 winPos = glm::vec2(ImGui::GetCursorScreenPos().x, ImGui::GetCursorScreenPos().y);
@@ -50,7 +51,7 @@ void ScenePanel::tick(Editor* editor, float dt) {
         prevMouseInsideViewport = mouseInsideViewport;
 
         // double the resolution for AA
-        editor->sceneRndr.render(&editor->proj, editor->openGraphic, 2 * viewW, 2 * viewH, &fb, &cam);
+        editor->sceneRndr.render(&editor->proj, editor->openGraphic, 2 * viewW, 2 * viewH, &fb, &cam, editor->getFrame());
         Framebuffer::renderToScreen(editor->app->getW(), editor->app->getH());
 
         // an image button is needed to make sure the window doensn't get dragged

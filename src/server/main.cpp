@@ -10,14 +10,13 @@ int main() {
     printf("Hello from the server!\n");
 
     Project proj;
+    proj.fps = 24;
     proj.init();
-    Graphic g;
-    g.init(0);
-    proj.graphics.add(g);
-    Graphic g2;
-    g2.init(1);
-    proj.graphics.add(g2);
-
+    proj.addGraphic(1, NULL);
+    Name name;
+    name.init("Layer");
+    proj.addLayer(2, 1, name, NULL);
+    
     Server server;
     if(!server.init(2000)) {
         printf("Server failed to initialize.\n");
@@ -41,7 +40,7 @@ int main() {
             response.free();
         }
         if(msgType == MessageType::UPDATE) {
-            server.broadcast(msg.data, msg.size, msg.client);
+            server.broadcast(msg.data, msg.size);
             proj.applyUpdate(&msg);
         }
         if(msgType == MessageType::ADD_UPDATE) {

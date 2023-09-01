@@ -1,31 +1,35 @@
 
-#ifndef ACTION_H
-#define ACTION_H
+#ifndef EDITOR_ACTION_H
+#define EDITOR_ACTION_H
 
-#include "../common/dynarr.h"
+#include "../project/op.h"
 
 class Editor;
 
-class Action {
+class EditorAction : public ProjectAction {
 public:
-    virtual void free() {}
-    // returns the inverse of the action
-    virtual Action* perform(Editor* editor) { return NULL; }
+    void init(Editor* editor);
+    void addOP(ProjectOP op) override;
+    void undo();
+    void redo();
+private:
+    Editor* editor;
 };
 
 class ActionManager {
 public:
     void init();
     void free();
-    void addUndo(Action* undo);
-    void undo(Editor* editor);
-    void redo(Editor* editor);
+
+    void pushAction(EditorAction act);
+    
     bool hasUndo();
+    void undo();
     bool hasRedo();
-private:
-    void freeAction(Action* action);
-    Arr<Action*> undos;
-    Arr<Action*> redos;
+    void redo();
+
+    Arr<EditorAction> acts;
+    int currAct;
 };
 
 #endif

@@ -3,3 +3,6 @@ build/
 web-build/
 .vscode/
 **/.DS_Store
+
+src/project/gen
+src/client/gen

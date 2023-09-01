@@ -10,8 +10,15 @@ class Client;
 #endif
 
 typedef uint64_t Key;
-
 #define NULL_KEY UINT64_MAX
+
+#define NAME_BUF_SIZE 64
+class Name {
+public:
+    void init(const char* str);
+    uint32_t len();
+    char str[NAME_BUF_SIZE];
+};
 
 class SocketMsg {
 public:
@@ -26,6 +33,7 @@ public:
     uint32_t readU32();
     float readFloat();
     Key readKey();
+    Name readName();
 
     glm::vec2 readVec2();
 
@@ -46,6 +54,7 @@ public:
     void writeU32(uint32_t val);
     void writeFloat(float val);
     void writeKey(Key key);
+    void writeName(Name name);
 
     void writeVec2(glm::vec2 vec);
 

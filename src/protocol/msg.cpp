@@ -2,10 +2,21 @@
 #include "msg.h"
 #include <cstdlib>
 
+void Name::init(const char* str) {
+    this->str[NAME_BUF_SIZE - 1] = '\0';
+    int len = fmin(strlen(str), NAME_BUF_SIZE - 1);
+    for(int i = 0; i < len; i++)
+        this->str[i] = str[i];
+}
+
+uint32_t Name::len() {
+    return strlen(str);
+}
+
 bool littleEndian() {
-    int i = 1;
-    char *p = (char *)&i;
-    return p[0] == 1;
+    unsigned int x = 1;
+    char* c = (char*)&x;
+    return (int)*c == 1;
 }
 
 void SocketMsg::init() {
@@ -59,7 +70,7 @@ float SocketMsg::readFloat() {
 }
 
 Key SocketMsg::readKey() {
-    uint8_t buf[sizeof(uint64_t)];
+    uint64_t buf[sizeof(uint64_t)];
     for(int i = 0; i < sizeof(uint64_t); i++)
         buf[i] = readU8();
     uint64_t key = 0;
@@ -71,6 +82,16 @@ Key SocketMsg::readKey() {
             key |= buf[sizeof(uint64_t) - i - 1] << (8 * i);
     }
     return key;
+}
+
+Name SocketMsg::readName() {
+    uint32_t len = readU32();
+    len = fmin(len, NAME_BUF_SIZE - 1);
+    Name name;
+    for(int i = 0; i < len; i++)
+        name.str[i] = readU8();
+    name.str[len] = '\0';
+    return name;
 }
 
 glm::vec2 SocketMsg::readVec2() {
@@ -141,6 +162,13 @@ void MsgWriter::writeKey(Key key) {
     }
     for(int i = 0; i < sizeof(uint64_t); i++)
         writeU8(buf[i]);
+}
+
+void MsgWriter::writeName(Name name) {
+    uint32_t len = strlen(name.str);
+    writeU32(len);
+    for(int i = 0; i < len; i++)
+        writeU8(name.str[i]); 
 }
 
 void MsgWriter::writeVec2(glm::vec2 vec) {
