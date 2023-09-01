@@ -33,7 +33,7 @@ public:
     virtual const char* getName() { return "Panel"; }
     virtual size_t getSize() { return sizeof(Panel); }
 
-    void render(Editor* editor, float dt);
+    bool render(Editor* editor, float dt);
     int key;
 };
 

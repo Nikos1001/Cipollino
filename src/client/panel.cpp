@@ -10,13 +10,15 @@
 #include "panels/timeline.h"
 #include "panels/debug.h"
 
-void Panel::render(Editor* editor, float dt) {
+bool Panel::render(Editor* editor, float dt) {
     char nameBuf[256];
     const char* name = this->getName();
     snprintf(nameBuf, sizeof(nameBuf), "%s##%d", name, key);
-    ImGui::Begin(nameBuf);
+    bool winOpen = true;
+    ImGui::Begin(nameBuf, &winOpen);
     tick(editor, dt);
     ImGui::End();
+    return winOpen;
 }
 
 
@@ -60,7 +62,12 @@ void PanelManager::addPanel(PanelType type) {
 
 void PanelManager::tick(Editor* editor, float dt) {
     for(int i = 0; i < panels.cnt(); i++) {
-        panels[i]->render(editor, dt);
+        if(!panels[i]->render(editor, dt)) {
+            panels[i]->free();
+            delete panels[i];
+            panels.removeAt(i);
+            i--;
+        }
     }
 }
 
