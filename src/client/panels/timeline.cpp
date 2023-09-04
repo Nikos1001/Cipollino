@@ -10,6 +10,7 @@ void TimelinePanel::init(int key) {
     scrollX = 0;
     editingName = false;
     focusNameEdit = false;
+    beganEditingGfxLen = false;
     frameDragX = 0;
     beganDrag = false;
     justSelectedFrame = false;
@@ -86,11 +87,16 @@ void TimelinePanel::tick(Editor* editor, float dt) {
     ImGui::SameLine(0, 20);
     int len = g->len;
     ImGui::PushItemWidth(100);
-    if(ImGui::DragInt("##graphicLen", &len, 1, 1, 99999, "Length: %d", ImGuiSliderFlags_AlwaysClamp)) {
-        EditorAction setLen;
-        setLen.init(editor);
-        editor->proj.setGraphicLen(g->key, len, &setLen);
-        editor->acts.pushAction(setLen);
+    if(ImGui::DragInt("##graphicLen", &len, 1, 1, 99999, "Length: %d", ImGuiSliderFlags_AlwaysClamp) && len != g->len) {
+        if(!beganEditingGfxLen) {
+            setGfxLenAction.init(editor);
+            beganEditingGfxLen = true;
+        } 
+        editor->proj.setGraphicLen(g->key, len, &setGfxLenAction);
+    }
+    if(ImGui::IsItemDeactivated()) {
+        editor->acts.pushAction(setGfxLenAction);
+        beganEditingGfxLen = false;
     }
     ImGui::PopItemWidth();
 

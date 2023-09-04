@@ -8,6 +8,7 @@ void ProjectAction::init() {
 void ProjectAction::free() {
     for(int i = 0; i < ops.cnt(); i++)
         ops[i].free();
+    ops.free();
 }
 
 void ProjectAction::addOP(ProjectOP op) {

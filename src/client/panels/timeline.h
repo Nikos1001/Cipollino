@@ -23,6 +23,9 @@ private:
     EditorAction layerNameEditAction;
     Key layerCtxKey;
 
+    bool beganEditingGfxLen;
+    EditorAction setGfxLenAction;
+
     float frameDragX;
     EditorAction frameDragAction;
     bool beganDrag;
