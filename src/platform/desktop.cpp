@@ -7,6 +7,7 @@
 using websocketpp::lib::placeholders::_1;
 using websocketpp::lib::placeholders::_2;
 using websocketpp::lib::bind;
+typedef std::shared_ptr<boost::asio::ssl::context> context_ptr;
 
 static void getSettingPath(char* buf, int size, const char* name) {
     // TODO: platforms besides macos exist!
@@ -88,6 +89,19 @@ void runApp(App* app) {
 
 }
 
+static context_ptr socketTLSInitHandler() {
+    context_ptr ctx = std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::sslv23);
+    try {
+        ctx->set_options(boost::asio::ssl::context::default_workarounds |
+        boost::asio::ssl::context::no_sslv2 |
+        boost::asio::ssl::context::no_sslv3 |
+        boost::asio::ssl::context::single_dh_use);
+    } catch (std::exception &e) {
+        printf("Error in context pointer: %s\n", e.what());
+    }
+    return ctx;
+}
+
 void socketOpenHandler(SocketData* sock, websocketpp::connection_hdl hdl) {
     sock->mutex.lock();
     sock->server = hdl;
@@ -126,6 +140,7 @@ bool Socket::init(const char* url) {
     msgs->init();
     sock->msgs = msgs;
     sock->sock.init_asio();
+    sock->sock.set_tls_init_handler(bind(&socketTLSInitHandler));
     sock->sock.clear_access_channels(websocketpp::log::alevel::all);
     sock->sock.set_open_handler(bind(socketOpenHandler, sock, ::_1));
     sock->sock.set_close_handler(bind(socketCloseHandler, sock, ::_1));
@@ -133,6 +148,7 @@ bool Socket::init(const char* url) {
     websocketpp::lib::error_code ec;
     WSClient::connection_ptr con = sock->sock.get_connection(url, ec);
     if(ec) {
+        printf("%s\n", ec.message().c_str());
         delete sock;
         sock = NULL;
         return false;

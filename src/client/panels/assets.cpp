@@ -33,7 +33,7 @@ void AssetsPanel::tick(Editor* editor, float dt) {
             }
             Name temp;
             temp.init(g->name.str);
-            if(ImGui::InputText("##gfxName", temp.str, NAME_BUF_SIZE)) {
+            if(ImGui::InputText("###gfxName", temp.str, NAME_BUF_SIZE)) {
                 if(!nameEditActionBegan) {
                     nameEditActionBegan = true;
                     nameEditAction.init(editor);
@@ -66,20 +66,24 @@ void AssetsPanel::tick(Editor* editor, float dt) {
                 editor->openGraphic = key;
             }
         }
-        if(ImGui::BeginPopupContextItem()) {
-            if(ImGui::MenuItem("Rename")) {
-                editingName = true;
-                focusNameEdit = true;
-                editingNameGfx = key;
-            }
-            if(ImGui::MenuItem("Delete")) {
-                EditorAction deleteGraphic;
-                deleteGraphic.init(editor);
-                editor->proj.deleteGraphic(key, &deleteGraphic);
-                editor->acts.pushAction(deleteGraphic);
-            }
-            ImGui::EndPopup();
+        if(ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+            ImGui::OpenPopup("###graphicContext");
+            graphicContextKey = key;
         }
+    }
+    if(ImGui::BeginPopup("###graphicContext")) {
+        if(ImGui::MenuItem("Rename")) {
+            editingName = true;
+            focusNameEdit = true;
+            editingNameGfx = graphicContextKey;
+        }
+        if(ImGui::MenuItem("Delete")) {
+            EditorAction deleteGraphic;
+            deleteGraphic.init(editor);
+            editor->proj.deleteGraphic(graphicContextKey, &deleteGraphic);
+            editor->acts.pushAction(deleteGraphic);
+        }
+        ImGui::EndPopup();
     }
 }
 

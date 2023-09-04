@@ -1,6 +1,7 @@
 
 build/
 web-build/
+mac-build/
 .vscode/
 **/.DS_Store
 

@@ -1,8 +1,10 @@
 
 # Common
 
-# we only need boost for websocketpp
+# websocketpp deps 
 find_package(Boost REQUIRED)
+set(OPENSSL_USE_STATIC_LIBS TRUE)
+find_package(OpenSSL REQUIRED)
 
 set(CMAKE_CXX_STANDARD 11)
 
@@ -47,7 +49,7 @@ target_include_directories(anim_client PRIVATE libs/imgui)
 add_dependencies(anim_client gen)
 
 if(DEFINED EMSCRIPTEN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -sEXPORTED_RUNTIME_METHODS=stringToNewUTF8 -lGL -lwebsocket.js -s WASM=1 -s USE_WEBGL2=1 -s USE_GLFW=3 -s FULL_ES3=1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -sEXPORTED_RUNTIME_METHODS=stringToNewUTF8 -lGL -lwebsocket.js -s WASM=1 -s USE_WEBGL2=1 -s USE_GLFW=3 -s FULL_ES3=1 -sALLOW_MEMORY_GROWTH")
 else()
     add_subdirectory(libs/glfw)
     target_link_libraries(anim_client glfw)
@@ -59,6 +61,8 @@ else()
 endif()
 
 target_link_libraries(anim_client glm)
+target_link_libraries(anim_client OpenSSL::Crypto)
+target_link_libraries(anim_client OpenSSL::SSL)
 
 # Server
 

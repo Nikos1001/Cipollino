@@ -48,8 +48,8 @@ class Client : public App {
                 if(ImGui::Button("Connect")) {
                     if(initedSock)
                         sock.free();
-                    sock.init(host);
-                    initedSock = true;
+                    if(sock.init(host))
+                        initedSock = true;
                 }
                 if(initedSock && sock.ready()) {
                     editor.init(&sock, this);

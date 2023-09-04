@@ -8,11 +8,11 @@
 #include "../protocol/msg.h"
 
 #ifndef __EMSCRIPTEN__
-#include <websocketpp/config/asio_no_tls_client.hpp>
+#include <websocketpp/config/asio_client.hpp>
 #include <websocketpp/client.hpp>
 #include <thread>
 
-typedef websocketpp::client<websocketpp::config::asio_client> WSClient;
+typedef websocketpp::client<websocketpp::config::asio_tls_client> WSClient;
 typedef websocketpp::config::asio_client::message_type::ptr MsgPtr;
 #else
 #include <emscripten/websocket.h>

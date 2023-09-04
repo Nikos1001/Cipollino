@@ -15,6 +15,7 @@ public:
     size_t getSize();
 
 private:
+    Key graphicContextKey;
     Key editingNameGfx;
     bool editingName;
     bool focusNameEdit;
