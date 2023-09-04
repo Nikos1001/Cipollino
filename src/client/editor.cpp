@@ -1,6 +1,8 @@
 
 #include "editor.h"
 #include "../protocol/protocol.h"
+#include "gui.h"
+#include "panels/timeline.h"
 
 void Editor::init(Socket* sock, App* app) {
     this->sock = sock;
@@ -23,10 +25,13 @@ void Editor::init(Socket* sock, App* app) {
     activeLayer = 0;
 
     playing = false;
+    time = 0.0f;
 
 }
 
 void Editor::tick(float dt) {
+
+    // ImGui::ShowDemoWindow();
 
     if(ImGui::BeginMainMenuBar()) {
         if(ImGui::BeginMenu("Edit")) {
@@ -51,21 +56,58 @@ void Editor::tick(float dt) {
     }
 
     Graphic* g = getOpenGraphic();
+    Layer* l = NULL;
     if(g != NULL) {
         if(activeLayer < 0)
             activeLayer = 0;
         if(activeLayer >= g->layers.cnt())
             activeLayer = g->layers.cnt() - 1;
+        if(g->layers.cnt() > 0)
+            l = proj.getLayer(g->layers[activeLayer]);
     }
 
-    if(!ImGui::GetIO().WantTextInput && ImGui::GetIO().KeyMods == ImGuiMod_Super) {
-        if(ImGui::IsKeyPressed(ImGuiKey_Z, false))
-            acts.undo();
-        if(ImGui::IsKeyPressed(ImGuiKey_Y, false))
-            acts.redo();
+    if(canDoShortcuts()) {
+        if(ImGui::GetIO().KeyMods == ImGuiMod_Super) {
+            if(ImGui::IsKeyPressed(ImGuiKey_Z))
+                acts.undo();
+            if(ImGui::IsKeyPressed(ImGuiKey_Y))
+                acts.redo();
+        }
+        if(ImGui::IsKeyPressed(ImGuiKey_Space))
+            playing = !playing;
+        if(ImGui::IsKeyPressed(ImGuiKey_Period)) {
+            if(shiftDown()) {
+                goToNextFrame(this);
+            } else {
+                time += proj.frameLen();
+            }
+        }
+        if(ImGui::IsKeyPressed(ImGuiKey_Comma)) {
+            if(shiftDown()) {
+                goToPrevFrame(this);
+            } else {
+                time -= proj.frameLen();
+            }
+        }
+        if(ImGui::IsKeyPressed(ImGuiKey_K, false)) {
+            if(l != NULL) {
+                Frame* f = l->getFrameStartingAt(&proj, getFrame());
+                if(f == NULL) {
+                    EditorAction createFrame;
+                    createFrame.init(this);
+                    proj.addFrame(keys.nextKey(), l->key, getFrame(), &createFrame);
+                    acts.pushAction(createFrame);
+                }
+            }
+        }
     }
-    if(!ImGui::GetIO().WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Space, false)) {
-        playing = !playing;
+
+    if(g != NULL) {
+        if(playing)
+            time += dt;
+        time = fmax(0.0f, time);
+        if(time > g->len * proj.frameLen())
+            time = 0.0f; 
     }
 
     ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
@@ -89,9 +131,6 @@ void Editor::tick(float dt) {
         sock->send(&msg, sizeof(msg));
         sentGet = true;
     }
-
-    if(playing)
-        time += dt;
 
     panels.tick(this, dt);
     panels.saveSettings(this);
@@ -135,5 +174,10 @@ Layer* Editor::getActiveLayer() {
 }
 
 int Editor::getFrame() {
-    return (int)(time / (1.0f / proj.fps));
+    return (int)(time / proj.frameLen());
+}
+
+void Editor::setTime(float t) {
+    time = t;
+    playing = false;
 }

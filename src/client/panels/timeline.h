@@ -4,6 +4,7 @@
 
 #include "../panel.h"
 #include "../action.h"
+#include "../select.h"
 
 class TimelinePanel : public Panel {
 public:
@@ -20,8 +21,17 @@ private:
     bool editingName;
     bool focusNameEdit;
     EditorAction layerNameEditAction;
+    Key layerCtxKey;
+
+    float frameDragX;
+    EditorAction frameDragAction;
+    bool beganDrag;
+    bool justSelectedFrame;
+
+    SelectionManager sels;
 };
 
-
+void goToPrevFrame(Editor* editor);
+void goToNextFrame(Editor* editor);
 
 #endif

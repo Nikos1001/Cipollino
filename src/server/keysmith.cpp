@@ -39,6 +39,11 @@ int KeyBlock::getKeysLeft() {
 void ClientKeyRecord::init() {
     a.init();
     b.init();
+    returnedKeys.init();
+}
+
+void ClientKeyRecord::free() {
+    returnedKeys.free();
 }
 
 bool ClientKeyRecord::useKey(Key key) {
@@ -46,6 +51,12 @@ bool ClientKeyRecord::useKey(Key key) {
         return true;
     if(b.useKey(key))
         return true;
+    for(int i = 0; i < returnedKeys.cnt(); i++) {
+        if(returnedKeys[i] == key) {
+            returnedKeys.removeAt(i);
+            return true;
+        }
+    }
     return false;
 }
 

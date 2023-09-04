@@ -3,10 +3,10 @@
 #include <cstdlib>
 
 void Name::init(const char* str) {
-    this->str[NAME_BUF_SIZE - 1] = '\0';
     int len = fmin(strlen(str), NAME_BUF_SIZE - 1);
-    for(int i = 0; i < len; i++)
+    for(int i = 0; i < len + 1; i++)
         this->str[i] = str[i];
+    this->str[NAME_BUF_SIZE - 1] = '\0';
 }
 
 uint32_t Name::len() {

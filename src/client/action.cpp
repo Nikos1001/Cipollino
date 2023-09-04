@@ -9,11 +9,14 @@ void EditorAction::init(Editor* editor) {
 
 void EditorAction::addOP(ProjectOP op) {
     ProjectAction::addOP(op);
-    MsgWriter msg;
-    msg.init();
-    op.writeFwd(&msg, this);
-    editor->sock->send(msg.getData(), msg.getSize());
-    msg.free();
+    Arr<MsgWriter> msgs;
+    msgs.init();
+    op.writeFwd(&msgs, this);
+    for(int i = 0; i < msgs.cnt(); i++) {
+        editor->sock->send(msgs[i].getData(), msgs[i].getSize());
+        msgs[i].free();
+    }
+    msgs.free();
 }
 
 

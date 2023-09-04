@@ -7,7 +7,7 @@ find_package(Boost REQUIRED)
 set(CMAKE_CXX_STANDARD 11)
 
 set(COMMON_SOURCES
-        src/project/gen/project.cpp src/project/stroke.cpp src/project/layer.cpp 
+        src/project/gen/project.cpp src/project/stroke.cpp src/project/layer.cpp src/project/frame.cpp src/project/project.cpp
         src/project/gen/op.cpp src/project/op.cpp
         src/protocol/msg.cpp
         src/common/common.cpp src/common/scanner.cpp)
@@ -19,7 +19,6 @@ add_custom_target(
     COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/src/project/gen.py
     )
 
-
 # Client
 
 project(anim_client)
@@ -28,6 +27,7 @@ set(CLIENT_SOURCES
         ${COMMON_SOURCES}
         src/client/main.cpp src/client/editor.cpp src/client/tool.cpp src/client/panel.cpp
         src/client/panels/scene.cpp src/client/panels/assets.cpp src/client/panels/timeline.cpp src/client/panels/debug.cpp
+        src/client/gui.cpp src/client/select.cpp
         src/client/action.cpp src/client/gen/action.cpp
         src/platform/common.cpp
         src/render/mesh.cpp src/render/shader.cpp src/render/builder.cpp src/render/framebuffer.cpp src/render/scene.cpp src/render/camera.cpp

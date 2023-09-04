@@ -12,7 +12,7 @@ int main() {
     Project proj;
     proj.fps = 24;
     proj.init();
-    proj.addGraphic(1, NULL);
+    proj.addGraphic(1, 100);
     Name name;
     name.init("Layer");
     proj.addLayer(2, 1, name, NULL);
@@ -41,7 +41,13 @@ int main() {
         }
         if(msgType == MessageType::UPDATE) {
             server.broadcast(msg.data, msg.size);
-            proj.applyUpdate(&msg);
+            Arr<Key> deleted;
+            deleted.init();
+            proj.applyUpdate(&msg, &deleted);
+            for(int i = 0; i < deleted.cnt(); i++) {
+                msg.client->keys.returnedKeys.add(deleted[i]);
+            }
+            deleted.free();
         }
         if(msgType == MessageType::ADD_UPDATE) {
             Key key = msg.readKey();

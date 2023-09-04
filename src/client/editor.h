@@ -43,6 +43,7 @@ public:
     bool playing;
 
     int getFrame();
+    void setTime(float t);
 
 private:
     bool sentGet;

@@ -4,12 +4,18 @@
 proj_def = {
     'data': [
         'uint32_t fps'
-    ]
+    ],
+    'class_inject': '''
+    float frameLen();
+'''
 }
 
 objs_def = {
     'Graphic': {
-        'children': ['Layer']
+        'children': ['Layer'],
+        'data': [
+            'uint32_t len'
+        ]
     },
 
     'Layer': {
@@ -17,6 +23,7 @@ objs_def = {
         'class_inject': '''
     Frame* getFrameAt(Project* proj, int t);
     Frame* getFrameStartingAt(Project* proj, int t);
+    Frame* getFrameAfter(Project* proj, int t);
 ''',
         'data': [
             'Name name'
@@ -26,9 +33,11 @@ objs_def = {
     'Frame': {
         'children': ['Stroke'],
         'data': [
-            'uint32_t begin',
-            'uint32_t end'
-        ]
+            'uint32_t begin'
+        ],
+        'class_inject': '''
+    bool empty();
+'''
     },
 
     'Stroke': {
@@ -163,11 +172,12 @@ with open('gen/project.h', 'w') as f:
     f.write('\n')
     f.write('\tvoid writeTo(MsgWriter* msg);\n')
     f.write('\tvoid loadFrom(SocketMsg* msg);\n')
-    f.write('\tvoid applyUpdate(SocketMsg* msg);\n')
+    f.write('\tvoid applyUpdate(SocketMsg* msg, Arr<Key>* deleted = NULL);\n')
     f.write('\tvoid applyAddUpdate(SocketMsg* msg, Key key);\n')
     f.write('\n')
     for field in proj_def['data']:
         f.write('\t' + field + ';\n')
+    f.write(proj_def['class_inject'])
     f.write('\n')
 
     for obj in objs:
@@ -175,7 +185,7 @@ with open('gen/project.h', 'w') as f:
 
         f.write('\tvoid add' + obj + '(' + get_add_method_args(obj) + 'ProjectAction* act = NULL);\n')
 
-        f.write('\tvoid delete' + obj + '(Key ' + decap_name(obj) + ', ProjectAction* act = NULL);\n')
+        f.write('\tvoid delete' + obj + '(Key ' + decap_name(obj) + ', ProjectAction* act = NULL, Arr<Key>* deleted = NULL);\n')
         
         if parent[obj] != None:
             f.write('\tvoid assign' + obj + '(Key ' + decap_name(obj) + ', Key ' + decap_name(parent[obj]) + ', ProjectAction* act = NULL);\n') 
@@ -295,14 +305,14 @@ with open('gen/project.cpp', 'w') as f:
     f.write('}\n')
     f.write('\n')
 
-    f.write('void Project::applyUpdate(SocketMsg* msg) {\n')
+    f.write('void Project::applyUpdate(SocketMsg* msg, Arr<Key>* deleted) {\n')
     f.write('\tuint8_t actionType = msg->readU8();\n')
     f.write('\tif(actionType == ' + str(action_codes['delete']) + ') {\n')
     f.write('\t\tuint32_t objIdx = msg->readU32();\n')
     f.write('\t\tKey key = msg->readKey();\n')
     for obj in objs:
         f.write('\t\tif(objIdx == ' + str(obj_idx[obj]) + ')\n')
-        f.write('\t\t\tdelete' + obj + '(key);\n')
+        f.write('\t\t\tdelete' + obj + '(key, NULL, deleted);\n')
     f.write('\t}\n')
     f.write('\tif(actionType == ' + str(action_codes['assign']) + ') {\n')
     f.write('\t\tuint32_t objIdx = msg->readU32();\n')
@@ -369,12 +379,12 @@ with open('gen/project.cpp', 'w') as f:
     f.write('}\n')
     f.write('\n')
 
-    for obj in objs:
+    for obj in objs[::-1]:
 
-        f.write('static ' + obj + 'AddData* make' + obj + 'AddData(' + obj + '* obj, ProjectAction* act) {\n')
-        f.write('\t' + obj + 'AddData* data = (' + obj + 'AddData*)anim::malloc(sizeof(' + obj + 'AddData));\n') 
+        f.write('static void init' + obj + 'AddData(' + obj + '* obj, ' + obj + 'AddData* data, ProjectAction* act, Project* proj) {\n')
+        f.write('\tdata->key = obj->key;\n')
         if parent[obj] != None:
-            f.write('\tdata->parent = act->getKey(obj->' + decap_name(parent[obj]) + ');\n')
+            f.write('\tdata->parent = obj->' + decap_name(parent[obj]) + ';\n')
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
                 type, name = field.split(' ')
@@ -382,8 +392,17 @@ with open('gen/project.cpp', 'w') as f:
         if 'children' in objs_def[obj]:
             for child in objs_def[obj]['children']:
                 f.write('\tdata->' + decap_name(child) + 's.init();\n')
-                f.write('\tfor(int i = 0; i < obj->' + decap_name(child) + 's.cnt(); i++)\n')
-                f.write('\t\tdata->' + decap_name(child) + 's.add(act->getKey(obj->' + decap_name(child) + 's[i]));\n')
+                f.write('\tfor(int i = 0; i < obj->' + decap_name(child) + 's.cnt(); i++) {\n')
+                f.write('\t\t' + child + 'AddData childData;\n')
+                f.write('\t\tinit' + child + 'AddData(proj->get' + child + '(obj->' + decap_name(child) + 's[i]), &childData, act, proj);\n')
+                f.write('\t\tdata->' + decap_name(child) + 's.add(childData);\n')
+                f.write('\t}\n')
+        f.write('}\n')
+        f.write('\n')
+
+        f.write('static ' + obj + 'AddData* make' + obj + 'AddData(' + obj + '* obj, ProjectAction* act, Project* proj) {\n')
+        f.write('\t' + obj + 'AddData* data = (' + obj + 'AddData*)anim::malloc(sizeof(' + obj + 'AddData));\n') 
+        f.write('\tinit' + obj + 'AddData(obj, data, act, proj);\n')
         f.write('\treturn data;\n')
         f.write('}\n')
         f.write('\n')
@@ -414,31 +433,34 @@ with open('gen/project.cpp', 'w') as f:
         insert_update_injections(obj, 'key', 1)
         f.write('\tif(act != NULL) {\n')
         f.write('\t\tProjectOP op;\n')
-        f.write('\t\top.key = act->getKey(key);\n')
+        f.write('\t\top.key = key;\n')
         f.write('\t\top.type = ' + str(action_codes['add']) + ';\n')
         f.write('\t\top.objType = ' + str(obj_idx[obj]) + ';\n')
-        f.write('\t\top.data = (void*)make' + obj + 'AddData(&obj, act);\n')
+        f.write('\t\top.data = (void*)make' + obj + 'AddData(&obj, act, this);\n')
         f.write('\t\tact->addOP(op);\n')
         f.write('\t}\n')
+        # f.write('\tprintf("Added ' + obj + ' %llu\\n", key);\n')
         f.write('}\n')
         f.write('\n')
 
-        f.write('void Project::delete' + obj + '(Key key, ProjectAction* act) {\n')
+        f.write('void Project::delete' + obj + '(Key key, ProjectAction* act, Arr<Key>* deleted) {\n')
         f.write('\t' + obj + '* obj = get' + obj + '(key);\n')
         f.write('\tif(obj == NULL)\n')
         f.write('\t\treturn;\n')
+        f.write('\tif(deleted != NULL)\n')
+        f.write('\t\tdeleted->add(key);\n')
         f.write('\tif(act != NULL) {\n')
         f.write('\t\tProjectOP op;\n')
-        f.write('\t\top.key = act->getKey(key);\n')
+        f.write('\t\top.key = key;\n')
         f.write('\t\top.type = ' + str(action_codes['delete']) + ';\n')
         f.write('\t\top.objType = ' + str(obj_idx[obj]) + ';\n')
-        f.write('\t\top.data = (void*)make' + obj + 'AddData(obj, act);\n')
+        f.write('\t\top.data = (void*)make' + obj + 'AddData(obj, act, this);\n')
         f.write('\t\tact->addOP(op);\n')
         f.write('\t}\n')
         if 'children' in objs_def[obj]:
             for child in objs_def[obj]['children']:
-                f.write('\tfor(int i = 0; i < obj->' + decap_name(child) + 's.cnt(); i++)\n')
-                f.write('\t\tdelete' + child + '(obj->' + decap_name(child) + 's[i]);\n')
+                f.write('\tfor(int i = 0; i < obj->' + decap_name(child) + 's.cnt();)\n')
+                f.write('\t\tdelete' + child + '(obj->' + decap_name(child) + 's[i], NULL, deleted);\n')
         if parent[obj] != None:
             f.write('\t' + parent[obj] + '* parent = get' + parent[obj] + '(obj->' + decap_name(parent[obj]) + ');\n')
             f.write('\tfor(int i = 0; i < parent->' + decap_name(obj) + 's.cnt(); i++) {\n')
@@ -454,6 +476,7 @@ with open('gen/project.cpp', 'w') as f:
         f.write('\t\t\t' + decap_name(obj) + 's.removeAt(i);\n')
         f.write('\t\t}\n')
         f.write('\t}\n')
+        # f.write('\tprintf("Deleted ' + obj + ' %llu\\n", key);\n')
         f.write('}\n')
         f.write('\n')
         
@@ -480,11 +503,11 @@ with open('gen/project.cpp', 'w') as f:
             insert_update_injections(parent[obj], 'parent->key', 1)
             f.write('\tif(act != NULL) {\n')
             f.write('\t\tProjectOP op;\n')
-            f.write('\t\top.key = act->getKey(objKey);\n')
+            f.write('\t\top.key = objKey;\n')
             f.write('\t\top.type = ' + str(action_codes['assign']) + ';\n')
             f.write('\t\top.objType = ' + str(obj_idx[obj]) + ';\n')
-            f.write('\t\top.oldParent = act->getKey(prevParent->key);\n')
-            f.write('\t\top.newParent = act->getKey(parent->key);\n')
+            f.write('\t\top.oldParent = prevParent->key;\n')
+            f.write('\t\top.newParent = parent->key;\n')
             f.write('\t\tact->addOP(op);\n')
             f.write('\t}\n')
             f.write('}\n')
@@ -500,14 +523,14 @@ with open('gen/project.cpp', 'w') as f:
                 f.write('\t\treturn;\n')
                 f.write('\tif(act != NULL) {\n')
                 f.write('\t\tProjectOP op;\n')
-                f.write('\t\top.key = act->getKey(key);\n')
+                f.write('\t\top.key = key;\n')
                 f.write('\t\top.type = ' + str(action_codes['set']) + ';\n')
                 f.write('\t\top.objType = ' + str(obj_idx[obj]) + ';\n')
                 f.write('\t\top.fieldIdx = ' + str(i) + ';\n')
                 f.write('\t\top.oldData = anim::malloc(sizeof(' + type + '));\n')
                 f.write('\t\t*((' + type + '*)op.oldData) = obj->' + name + ';\n')
                 f.write('\t\tProjectOP* prevOp = &act->ops[act->ops.cnt() - 1];\n')
-                f.write('\t\tif(act->ops.cnt() > 0 && prevOp->key == act->getKey(key) && prevOp->type == ' + str(action_codes['set']) + ' && prevOp->objType == ' + str(obj_idx[obj]) + ' && prevOp->fieldIdx == ' + str(i) + ') {\n')
+                f.write('\t\tif(act->ops.cnt() > 0 && prevOp->key == key && prevOp->type == ' + str(action_codes['set']) + ' && prevOp->objType == ' + str(obj_idx[obj]) + ' && prevOp->fieldIdx == ' + str(i) + ') {\n')
                 f.write('\t\t\t*((' + type +  '*)op.oldData) = *((' + type + '*)prevOp->oldData);\n')
                 f.write('\t\t\tprevOp->free();\n')
                 f.write('\t\t\tact->ops.pop();\n')
@@ -525,17 +548,20 @@ with open('gen/op.h', 'w') as f:
     f.write('\n')
     f.write('#ifndef OP_GEN_H\n')
     f.write('#define OP_GEN_H\n')
-    for obj in objs:
+    for obj in objs[::-1]:
         f.write('\n')
         f.write('struct ' + obj + 'AddData {\n')
+        f.write('\tKey key;\n')
         if parent[obj] != None:
-            f.write('\tint parent;\n')
+            f.write('\tKey parent;\n')
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
                 f.write('\t' + field + ';\n')
         if 'children' in objs_def[obj]:
             for child in objs_def[obj]['children']:
-                f.write('\tArr<int> ' + decap_name(child) + 's;\n')
+                f.write('\tArr<' + child + 'AddData> ' + decap_name(child) + 's;\n')
+        f.write('\n')
+        f.write('\tvoid free();\n')
         f.write('};\n')
     f.write('\n')
     f.write('#endif\n')
@@ -548,11 +574,23 @@ with open('gen/op.cpp', 'w') as f:
     f.write('#include "../project.h"\n')
     f.write('#include "../../protocol/protocol.h"\n')
     f.write('\n')
+    for obj in objs:
+        f.write('void ' + obj + 'AddData::free() {\n')
+        if 'children' in objs_def[obj]:
+            for child in objs_def[obj]['children']:
+                f.write('\tfor(int i = 0; i < ' + decap_name(child) + 's.cnt(); i++)\n')
+                f.write('\t\t' + decap_name(child) + 's[i].free();\n')
+            f.write('\t' + decap_name(child) + 's.free();\n')
+        f.write('}\n')
+    f.write('\n')
     f.write('void ProjectOP::free() {\n')
     f.write('\tif(type == ' + str(action_codes['add']) + ' || type == ' + str(action_codes['delete']) + ') {\n')
     for obj in objs:
-        f.write('\t\tif(objType == ' + str(obj_idx[obj]) + ')\n')
+        f.write('\t\tif(objType == ' + str(obj_idx[obj]) + ') {\n')
+        f.write('\t\t\t' + obj + 'AddData* addData = (' + obj + 'AddData*)data;\n')
+        f.write('\t\t\taddData->free();\n')
         f.write('\t\t\tanim::free(data, sizeof(' + obj + 'AddData));\n')
+        f.write('\t\t}\n')
     f.write('\t}\n')
     f.write('\tif(type == ' + str(action_codes['set']) + ') {\n')
     for obj in objs:
@@ -570,28 +608,42 @@ with open('gen/op.cpp', 'w') as f:
     f.write('}\n')
     f.write('\n')
 
-    f.write('void ProjectOP::writeFwd(MsgWriter* msg, ProjectAction* act) {\n')
+    f.write('void ProjectOP::writeFwd(Arr<MsgWriter>* msgs, ProjectAction* act) {\n')
     f.write('\tif(type == ' + str(action_codes['add']) + ') {\n')
-    f.write('\t\tmsg->writeU8(MessageType::ADD_UPDATE);\n')
-    f.write('\t\tmsg->writeKey(act->keys[key]);\n')
-    f.write('\t\tmsg->writeU32(objType);\n')
+    f.write('\t\tMsgWriter msg;\n')
+    f.write('\t\tmsg.init();\n')
+    f.write('\t\tmsg.writeU8(MessageType::ADD_UPDATE);\n')
+    f.write('\t\tmsg.writeKey(key);\n')
+    f.write('\t\tmsg.writeU32(objType);\n')
     for obj in objs:
         f.write('\t\tif(objType == ' + str(obj_idx[obj]) + ') {\n')
         f.write('\t\t\t' + obj + 'AddData* addData = (' + obj + 'AddData*)data;\n')
         if parent[obj] != None:
-            f.write('\t\t\tmsg->writeKey(act->keys[addData->parent]);\n')
+            f.write('\t\t\tmsg.writeKey(addData->parent);\n')
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
                 type, name = field.split(' ')
-                f.write('\t\t\tmsg->write' + typename_to_rw_name[type] + '(addData->' + name + ');\n')
+                f.write('\t\t\tmsg.write' + typename_to_rw_name[type] + '(addData->' + name + ');\n')
         f.write('\t\t}\n')
+    f.write('\t\tmsgs->add(msg);\n')
+    f.write('\t}\n')
+    f.write('\tif(type == ' + str(action_codes['delete']) + ') {\n')
+    f.write('\t\tMsgWriter msg;\n')
+    f.write('\t\tmsg.init();\n')
+    f.write('\t\tmsg.writeU8(MessageType::UPDATE);\n')
+    f.write('\t\tmsg.writeU8(' + str(action_codes['delete']) + ');\n')
+    f.write('\t\tmsg.writeU32(objType);\n')
+    f.write('\t\tmsg.writeKey(key);\n')
+    f.write('\t\tmsgs->add(msg);\n')
     f.write('\t}\n')
     f.write('\tif(type == ' + str(action_codes['set']) + ') {\n')
-    f.write('\t\tmsg->writeU8(MessageType::UPDATE);\n')
-    f.write('\t\tmsg->writeU8(' + str(action_codes['set']) + ');\n')
-    f.write('\t\tmsg->writeU32(objType);\n')
-    f.write('\t\tmsg->writeU32(fieldIdx);\n')
-    f.write('\t\tmsg->writeKey(act->keys[key]);\n')
+    f.write('\t\tMsgWriter msg;\n')
+    f.write('\t\tmsg.init();\n')
+    f.write('\t\tmsg.writeU8(MessageType::UPDATE);\n')
+    f.write('\t\tmsg.writeU8(' + str(action_codes['set']) + ');\n')
+    f.write('\t\tmsg.writeU32(objType);\n')
+    f.write('\t\tmsg.writeU32(fieldIdx);\n')
+    f.write('\t\tmsg.writeKey(key);\n')
     for obj in objs:
         if 'data' in objs_def[obj]:
             f.write('\t\tif(objType == ' + str(obj_idx[obj]) + ') {\n')
@@ -599,25 +651,57 @@ with open('gen/op.cpp', 'w') as f:
                 field = objs_def[obj]['data'][i]
                 type, name = field.split(' ')
                 f.write('\t\t\tif(fieldIdx == ' + str(i) + ')\n')
-                f.write('\t\t\t\tmsg->write' + typename_to_rw_name[type] + '(*((' + type + '*)newData));\n')
+                f.write('\t\t\t\tmsg.write' + typename_to_rw_name[type] + '(*((' + type + '*)newData));\n')
             f.write('\t\t}\n')
+    f.write('\t\tmsgs->add(msg);\n')
     f.write('\t}\n')
     f.write('}\n')
     f.write('\n')
 
-    f.write('void ProjectOP::writeBwd(MsgWriter* msg, ProjectAction* act) {\n')
+    def generate_delete_bwd_code(obj, add_data_name, indent):
+        f.write('\t' * indent + 'MsgWriter msg;\n')
+        f.write('\t' * indent + 'msg.init();\n')
+        f.write('\t' * indent + 'msg.writeU8(MessageType::ADD_UPDATE);\n')
+        f.write('\t' * indent + 'msg.writeKey(' + add_data_name + '->key);\n')
+        f.write('\t' * indent + 'msg.writeU32(' + str(obj_idx[obj]) + ');\n')
+        if parent[obj] != None:
+            f.write('\t' * indent + 'msg.writeKey(' + add_data_name + '->parent);\n')
+        if 'data' in objs_def[obj]:
+            for field in objs_def[obj]['data']:
+                type, name = field.split(' ')
+                f.write('\t' * indent + 'msg.write' + typename_to_rw_name[type] + '(' + add_data_name + '->' + name + ');\n')
+        f.write('\t' * indent + 'msgs->add(msg);\n')
+        if 'children' in objs_def[obj]:
+            for child in objs_def[obj]['children']:
+                iter_name = 'abcdefghjklmnopqrstuvwxyz'[indent]
+                f.write('\t' * indent + 'for(int ' + iter_name + ' = 0; ' + iter_name + ' < ' + add_data_name + '->' + decap_name(child) + 's.cnt(); ' + iter_name + '++) {\n')
+                generate_delete_bwd_code(child, '(&' + add_data_name + '->' + decap_name(child) + 's[' + iter_name + '])', indent + 1)
+                f.write('\t' * indent + '}\n')
+
+    f.write('void ProjectOP::writeBwd(Arr<MsgWriter>* msgs, ProjectAction* act) {\n')
     f.write('\tif(type == ' + str(action_codes['add']) + ') {\n')
-    f.write('\t\tmsg->writeU8(MessageType::UPDATE);\n')
-    f.write('\t\tmsg->writeU8(' + str(action_codes['delete']) + ');\n')
-    f.write('\t\tmsg->writeU32(objType);\n')
-    f.write('\t\tmsg->writeKey(act->keys[key]);\n')
+    f.write('\t\tMsgWriter msg;\n')
+    f.write('\t\tmsg.init();\n')
+    f.write('\t\tmsg.writeU8(MessageType::UPDATE);\n')
+    f.write('\t\tmsg.writeU8(' + str(action_codes['delete']) + ');\n')
+    f.write('\t\tmsg.writeU32(objType);\n')
+    f.write('\t\tmsg.writeKey(key);\n')
+    f.write('\t\tmsgs->add(msg);\n')
+    f.write('\t}\n')
+    f.write('\tif(type == ' + str(action_codes['delete']) + ') {\n')
+    for obj in objs:
+        f.write('\t\tif(objType == ' + str(obj_idx[obj]) + ') {\n')
+        generate_delete_bwd_code(obj, '((' + obj + 'AddData*)data)', 3)
+        f.write('\t\t}\n')
     f.write('\t}\n')
     f.write('\tif(type == ' + str(action_codes['set']) + ') {\n')
-    f.write('\t\tmsg->writeU8(MessageType::UPDATE);\n')
-    f.write('\t\tmsg->writeU8(' + str(action_codes['set']) + ');\n')
-    f.write('\t\tmsg->writeU32(objType);\n')
-    f.write('\t\tmsg->writeU32(fieldIdx);\n')
-    f.write('\t\tmsg->writeKey(act->keys[key]);\n')
+    f.write('\t\tMsgWriter msg;\n')
+    f.write('\t\tmsg.init();\n')
+    f.write('\t\tmsg.writeU8(MessageType::UPDATE);\n')
+    f.write('\t\tmsg.writeU8(' + str(action_codes['set']) + ');\n')
+    f.write('\t\tmsg.writeU32(objType);\n')
+    f.write('\t\tmsg.writeU32(fieldIdx);\n')
+    f.write('\t\tmsg.writeKey(key);\n')
     for obj in objs:
         if 'data' in objs_def[obj]:
             f.write('\t\tif(objType == ' + str(obj_idx[obj]) + ') {\n')
@@ -625,8 +709,9 @@ with open('gen/op.cpp', 'w') as f:
                 field = objs_def[obj]['data'][i]
                 type, name = field.split(' ')
                 f.write('\t\t\tif(fieldIdx == ' + str(i) + ')\n')
-                f.write('\t\t\t\tmsg->write' + typename_to_rw_name[type] + '(*((' + type + '*)oldData));\n')
+                f.write('\t\t\t\tmsg.write' + typename_to_rw_name[type] + '(*((' + type + '*)oldData));\n')
             f.write('\t\t}\n')
+    f.write('\t\tmsgs->add(msg);\n')
     f.write('\t}\n')
     f.write('}\n')
 
@@ -634,6 +719,7 @@ if not os.path.isdir('../client/gen'):
     os.mkdir('../client/gen')
 
 with open('../client/gen/action.cpp', 'w') as f:
+
     f.write('\n') 
     f.write('#include "../action.h"\n')
     f.write('#include "../editor.h"\n')
@@ -644,7 +730,32 @@ with open('../client/gen/action.cpp', 'w') as f:
     f.write('\t\tif(ops[i].type == ' + str(action_codes['add']) + ') {\n')
     for obj in objs:
         f.write('\t\t\tif(ops[i].objType == ' + str(obj_idx[obj]) + ') {\n')
-        f.write('\t\t\t\teditor->proj.delete' + obj + '(keys[ops[i].key]);\n')
+        f.write('\t\t\t\teditor->proj.delete' + obj + '(ops[i].key);\n')
+        f.write('\t\t\t}\n')
+    f.write('\t\t}\n')
+    
+    def generate_undo_delete_code(obj, add_data_name, indent):
+        add_line = '\t' * indent + 'editor->proj.add' + obj + '(' + add_data_name + '->key'
+        if parent[obj] != None:
+            add_line += ', ' + add_data_name + '->parent' 
+        if 'data' in objs_def[obj]:
+            for field in objs_def[obj]['data']:
+                type, name = field.split(' ')
+                add_line += ', ' + add_data_name + '->' + name
+        add_line += ');\n'
+        f.write(add_line)
+        if 'children' in objs_def[obj]:
+            for child in objs_def[obj]['children']:
+                iter_name = 'abcdefghjklmnopqrstuvwxyz'[indent]
+                f.write('\t' * indent + 'for(int ' + iter_name + ' = 0; ' + iter_name + ' < ' + add_data_name + '->' + decap_name(child) + 's.cnt(); ' + iter_name + '++) {\n')
+                generate_undo_delete_code(child, '(&' + add_data_name + '->' + decap_name(child) + 's[' + iter_name + '])', indent + 1)
+                f.write('\t' * indent + '}\n')
+
+
+    f.write('\t\tif(ops[i].type == ' + str(action_codes['delete']) + ') {\n')
+    for obj in objs:
+        f.write('\t\t\tif(ops[i].objType == ' + str(obj_idx[obj]) + ') {\n')
+        generate_undo_delete_code(obj, '((' + obj + 'AddData*)ops[i].data)', 4)
         f.write('\t\t\t}\n')
     f.write('\t\t}\n')
     f.write('\t\tif(ops[i].type == ' + str(action_codes['set']) + ') {\n')
@@ -655,15 +766,18 @@ with open('../client/gen/action.cpp', 'w') as f:
                 field = objs_def[obj]['data'][i]
                 type, name = field.split(' ')
                 f.write('\t\t\t\tif(ops[i].fieldIdx == ' + str(i) + ') {\n')
-                f.write('\t\t\t\t\teditor->proj.set' + obj + cap_name(name) + '(keys[ops[i].key], *((' + type + '*)ops[i].oldData));\n')
+                f.write('\t\t\t\t\teditor->proj.set' + obj + cap_name(name) + '(ops[i].key, *((' + type + '*)ops[i].oldData));\n')
                 f.write('\t\t\t\t}\n')
             f.write('\t\t\t}\n')
     f.write('\t\t}\n')
-    f.write('\t\tMsgWriter msg;\n')
-    f.write('\t\tmsg.init();\n')
-    f.write('\t\tops[i].writeBwd(&msg, this);\n')
-    f.write('\t\teditor->sock->send(msg.getData(), msg.getSize());\n')
-    f.write('\t\tmsg.free();\n')
+    f.write('\t\tArr<MsgWriter> msgs;\n')
+    f.write('\t\tmsgs.init();\n')
+    f.write('\t\tops[i].writeBwd(&msgs, this);\n')
+    f.write('\t\tfor(int j = 0; j < msgs.cnt(); j++) {\n')
+    f.write('\t\t\teditor->sock->send(msgs[j].getData(), msgs[j].getSize());\n')
+    f.write('\t\t\tmsgs[j].free();\n')
+    f.write('\t\t}\n')
+    f.write('\t\tmsgs.free();\n')
     f.write('\t}\n')
     f.write('}\n')
     f.write('\n')
@@ -674,16 +788,21 @@ with open('../client/gen/action.cpp', 'w') as f:
     for obj in objs:
         f.write('\t\t\tif(ops[i].objType == ' + str(obj_idx[obj]) + ') {\n')
         f.write('\t\t\t\t' + obj + 'AddData* data = (' + obj + 'AddData*)ops[i].data;\n')
-        f.write('\t\t\t\tkeys[ops[i].key] = editor->keys.nextKey();\n')
-        add_line = '\t\t\t\teditor->proj.add' + obj + '(keys[ops[i].key]'
+        add_line = '\t\t\t\teditor->proj.add' + obj + '(ops[i].key'
         if parent[obj] != None:
-            add_line += ', keys[data->parent]'
+            add_line += ', data->parent'
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
                 type, name = field.split(' ')
                 add_line += ', data->' + name
         add_line += ');\n'
         f.write(add_line)
+        f.write('\t\t\t}\n')
+    f.write('\t\t}\n')
+    f.write('\t\tif(ops[i].type == ' + str(action_codes['delete']) + ') {\n')
+    for obj in objs:
+        f.write('\t\t\tif(ops[i].objType == ' + str(obj_idx[obj]) + ') {\n')
+        f.write('\t\t\t\teditor->proj.delete' + obj + '(ops[i].key);\n')
         f.write('\t\t\t}\n')
     f.write('\t\t}\n')
     f.write('\t\tif(ops[i].type == ' + str(action_codes['set']) + ') {\n')
@@ -694,14 +813,17 @@ with open('../client/gen/action.cpp', 'w') as f:
                 field = objs_def[obj]['data'][i]
                 type, name = field.split(' ')
                 f.write('\t\t\t\tif(ops[i].fieldIdx == ' + str(i) + ') {\n')
-                f.write('\t\t\t\t\teditor->proj.set' + obj + cap_name(name) + '(keys[ops[i].key], *((' + type + '*)ops[i].newData));\n')
+                f.write('\t\t\t\t\teditor->proj.set' + obj + cap_name(name) + '(ops[i].key, *((' + type + '*)ops[i].newData));\n')
                 f.write('\t\t\t\t}\n')
             f.write('\t\t\t}\n')
     f.write('\t\t}\n')
-    f.write('\t\tMsgWriter msg;\n')
-    f.write('\t\tmsg.init();\n')
-    f.write('\t\tops[i].writeFwd(&msg, this);\n')
-    f.write('\t\teditor->sock->send(msg.getData(), msg.getSize());\n')
-    f.write('\t\tmsg.free();\n')
+    f.write('\t\tArr<MsgWriter> msgs;\n')
+    f.write('\t\tmsgs.init();\n')
+    f.write('\t\tops[i].writeFwd(&msgs, this);\n')
+    f.write('\t\tfor(int j = 0; j < msgs.cnt(); j++) {\n')
+    f.write('\t\t\teditor->sock->send(msgs[j].getData(), msgs[j].getSize());\n')
+    f.write('\t\t\tmsgs[j].free();\n')
+    f.write('\t\t}\n')
+    f.write('\t\tmsgs.free();\n')
     f.write('\t}\n')
     f.write('}\n')

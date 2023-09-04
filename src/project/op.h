@@ -12,17 +12,17 @@ class ProjectAction;
 class ProjectOP {
 public:
     void free();
-    void writeFwd(MsgWriter* msg, ProjectAction* act);
-    void writeBwd(MsgWriter* msg, ProjectAction* act);
+    void writeFwd(Arr<MsgWriter>* msgs, ProjectAction* act);
+    void writeBwd(Arr<MsgWriter>* msgs, ProjectAction* act);
 
-    int key;
+    Key key;
     uint8_t type;
     uint32_t objType;
 
     void* data;
     
-    int oldParent;
-    int newParent;
+    Key oldParent;
+    Key newParent;
 
     uint32_t fieldIdx;
     void* oldData;
@@ -34,9 +34,7 @@ public:
     void init();
     void free();
     virtual void addOP(ProjectOP op);
-    int getKey(Key key);
 
-    Arr<Key> keys;
     Arr<ProjectOP> ops;
 };
 

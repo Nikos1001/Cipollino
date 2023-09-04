@@ -103,6 +103,7 @@ void Server::addClient(Client* client) {
 
 void Server::removeClient(Client* client) {
     clientsMutex.lock();
+    client->keys.free();
     for(int i = 0; i < clients.cnt(); i++) {
         if(clients[i] == client) {
             clients.removeAt(i);

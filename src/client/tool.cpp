@@ -8,18 +8,20 @@ void Pencil::init() {
 
 void Pencil::mouseClick(Editor* editor, glm::vec2 pos) {
     Graphic* g = editor->getOpenGraphic();
-    if(g->layers.cnt() == 0)
-        return;
-    Layer* l = editor->getActiveLayer(); 
-
     act.init(editor);
+    if(g->layers.cnt() == 0) {
+        Name name;
+        name.init("Layer");
+        editor->proj.addLayer(editor->keys.nextKey(), g->key, name, &act);
+        editor->activeLayer = 0;
+    }
+    Layer* l = editor->getActiveLayer(); 
 
     Frame* frame = editor->getActiveLayer()->getFrameStartingAt(&editor->proj, editor->getFrame());
     Key frameKey;
     if(frame == NULL) {
         frameKey = editor->keys.nextKey();
-        // TODO: detect duplicate frames!!!!!!
-        editor->proj.addFrame(frameKey, g->layers[editor->activeLayer], editor->getFrame(), editor->getFrame(), &act);
+        editor->proj.addFrame(frameKey, g->layers[editor->activeLayer], editor->getFrame(), &act);
     } else {
         frameKey = frame->key;
     }

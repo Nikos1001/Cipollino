@@ -13,7 +13,7 @@ enum MessageType {
 
     // used to request keys
     KEY_REQ = 4,
-    KEY_GRANT = 5
+    KEY_GRANT = 5,
 };
 
 #endif

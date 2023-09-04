@@ -25,7 +25,9 @@ class ClientKeyRecord {
 friend class KeySmith;
 public:
     void init(); 
+    void free();
     bool useKey(Key key);
+    Arr<Key> returnedKeys;
 private:
     KeyBlock a;
     KeyBlock b;
