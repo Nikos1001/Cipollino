@@ -112,6 +112,7 @@ void TimelinePanel::tick(Editor* editor, float dt) {
     if(ImGui::BeginPopup("##layerContext")) {
         if(ImGui::MenuItem("Rename")) {
             editingName = true;
+            focusNameEdit = true;
             for(int i = 0; i < g->layers.cnt(); i++)
                 if(g->layers[i] == layerCtxKey)
                     editor->activeLayer = i;
@@ -142,7 +143,7 @@ void TimelinePanel::tick(Editor* editor, float dt) {
             if(ImGui::InputText("##layerName", temp.str, NAME_BUF_SIZE)) {
                 editor->proj.setLayerName(l->key, temp, &layerNameEditAction);
             }
-            if(ImGui::IsItemDeactivatedAfterEdit()) {
+            if(ImGui::IsItemDeactivated()) {
                 if(l->name.len() == 0) {
                     Name name;
                     name.init("Layer");

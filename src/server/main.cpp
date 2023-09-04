@@ -12,7 +12,9 @@ int main() {
     Project proj;
     proj.fps = 24;
     proj.init();
-    proj.addGraphic(1, 100);
+    Name gfxName;
+    gfxName.init("Graphic");
+    proj.addGraphic(1, 100, gfxName);
     Name name;
     name.init("Layer");
     proj.addLayer(2, 1, name, NULL);

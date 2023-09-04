@@ -14,7 +14,8 @@ objs_def = {
     'Graphic': {
         'children': ['Layer'],
         'data': [
-            'uint32_t len'
+            'uint32_t len',
+            'Name name'
         ]
     },
 
