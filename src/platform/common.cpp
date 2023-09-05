@@ -10,6 +10,7 @@ void initImGui(GLFWwindow* win) {
     ImGui_ImplOpenGL3_Init();
     ImGui::StyleColorsDark();
     ImGui::GetStyle().WindowMinSize = ImVec2(100, 100);
+    ImGui::GetIO().ConfigWindowsMoveFromTitleBarOnly = true;
 }
 
 void imguiNewFrame() {

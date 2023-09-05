@@ -42,7 +42,7 @@ int main() {
             response.free();
         }
         if(msgType == MessageType::UPDATE) {
-            server.broadcast(msg.data, msg.size);
+            server.broadcast(msg.data, msg.size, msg.client);
             Arr<Key> deleted;
             deleted.init();
             proj.applyUpdate(&msg, &deleted);
