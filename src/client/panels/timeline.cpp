@@ -223,7 +223,7 @@ void TimelinePanel::tick(Editor* editor, float dt) {
     }
     for(int i = 0; i < lastShownFrame; i++) {
         float xOff = i * frameW;
-        drawList->AddLine(cursor + ImVec2(xOff, 0), cursor + ImVec2(xOff, totalH), tableBorderLightCol);
+        drawList->AddLine(cursor + ImVec2(xOff, 0), cursor + ImVec2(xOff, totalH - 1), tableBorderLightCol);
     }
 
     // Frames
@@ -370,11 +370,13 @@ void TimelinePanel::tick(Editor* editor, float dt) {
     float playheadX = (currFrame + 0.5f) * frameW;
     drawList->AddLine(cursor + ImVec2(playheadX, -9), cursor + ImVec2(playheadX, totalH), buttonActiveCol, 2);
     drawList->AddRectFilled(topbarCursor + ImVec2(playheadX - 3, -topbarH), topbarCursor + ImVec2(playheadX + 4, -8), buttonActiveCol);
+    bool updateScrollX = false;
     if(editor->playing) {
         if(playheadX - scrollX > canvasSize.x - layerInfoW)
             scrollX += canvasSize.x - layerInfoW;
         if(playheadX - scrollX < 0)
             scrollX -= canvasSize.x - layerInfoW;
+        updateScrollX = true;
     }
 
     drawList->AddRectFilled(cursor + ImVec2(g->len * frameW, 0), cursor + ImVec2(totalW + 20.0f, totalH), endOfGraphicDarkenCol);
@@ -383,6 +385,10 @@ void TimelinePanel::tick(Editor* editor, float dt) {
     scrollX = fmin(scrollX, ImGui::GetScrollMaxX());
     scrollY = fmax(scrollY, 0.0f);
     scrollY = fmin(scrollY, ImGui::GetScrollMaxY());
+
+    if(updateScrollX) {
+        ImGui::SetScrollX(scrollX);
+    }
 
     ImGui::EndChild();
 
