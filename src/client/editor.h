@@ -42,6 +42,9 @@ public:
     float time;
     bool playing;
 
+    int onionSkinBefore;
+    int onionSkinAfter;
+
     int getFrame();
     void setTime(float t);
 

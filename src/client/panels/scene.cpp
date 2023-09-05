@@ -50,12 +50,24 @@ void ScenePanel::tick(Editor* editor, float dt) {
             editor->currTool->mouseRelease(editor, mousePos);
         prevMouseInsideViewport = mouseInsideViewport;
 
-        // double the resolution for AA
-        editor->sceneRndr.render(&editor->proj, editor->openGraphic, 2 * viewW, 2 * viewH, &fb, &cam, editor->getFrame());
+        SceneRenderParams params;
+        params.proj = &editor->proj;
+        params.graphicKey = editor->openGraphic;
+        params.w = 2 * viewW; // double the resolution for AA
+        params.h = 2 * viewH;
+        params.fb = &fb;
+        params.cam = &cam;
+        params.frame = editor->getFrame();
+        params.onionBefore = editor->onionSkinBefore;
+        params.onionAfter = editor->onionSkinAfter;
+        if(editor->playing) {
+            params.onionBefore = 0;
+            params.onionAfter = 0;
+        }
+        editor->sceneRndr.render(params);
         Framebuffer::renderToScreen(editor->app->getW(), editor->app->getH());
 
-        // an image button is needed to make sure the window doensn't get dragged
-        ImGui::ImageButton((void*)(intptr_t)fb.color, ImVec2(viewW, viewH), ImVec2(0, 1), ImVec2(1, 0), 0);
+        ImGui::Image((void*)(intptr_t)fb.color, ImVec2(viewW, viewH), ImVec2(0, 1), ImVec2(1, 0));
 
         if(ImGui::IsWindowHovered()) {
             float wheel = ImGui::GetIO().MouseWheel;

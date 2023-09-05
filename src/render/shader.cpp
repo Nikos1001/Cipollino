@@ -50,3 +50,7 @@ void Shader::use() {
 void Shader::setMat4(const char* name, glm::mat4 val) {
     glUniformMatrix4fv(glGetUniformLocation(program, name), 1, false, glm::value_ptr(val));
 }
+
+void Shader::setVec4(const char* name, glm::vec4 val) {
+    glUniform4fv(glGetUniformLocation(program, name), 1, glm::value_ptr(val));
+}

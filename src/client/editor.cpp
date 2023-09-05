@@ -27,6 +27,9 @@ void Editor::init(Socket* sock, App* app) {
     playing = false;
     time = 0.0f;
 
+    onionSkinBefore = 1;
+    onionSkinAfter = 1;
+
 }
 
 void Editor::tick(float dt) {

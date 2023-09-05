@@ -100,6 +100,16 @@ void TimelinePanel::tick(Editor* editor, float dt) {
     }
     ImGui::PopItemWidth();
 
+    ImGui::SameLine(0, 20);
+    ImGui::Text("Onion skin:");
+    ImGui::SetItemTooltip("Set number of onion skins shown before and after the current frame.");
+    ImGui::SameLine(0, 2);
+    ImGui::PushItemWidth(20);
+    ImGui::DragInt("##onionBefore", &editor->onionSkinBefore, 0.1f, 0, 10, "%d", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::SameLine(0, 2);
+    ImGui::DragInt("##onionAfter", &editor->onionSkinAfter, 0.1f, 0, 10, "%d", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::PopItemWidth();
+
     ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX(), controlBarH));
     ImGui::EndChild();
     ImGui::SetCursorPos(initCursor);

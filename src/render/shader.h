@@ -11,6 +11,7 @@ public:
     void use();
 
     void setMat4(const char* name, glm::mat4 val); 
+    void setVec4(const char* name, glm::vec4 val);
 private:
     unsigned int program;
 };
