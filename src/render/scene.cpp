@@ -59,27 +59,25 @@ void SceneRenderer::render(SceneRenderParams params) {
         for(int i = 0; i < g->layers.cnt(); i++) {
             Layer* l = params.proj->getLayer(g->layers[i]);
             Frame* f = l->getFrameAt(params.proj, params.frame);
-            if(f != NULL) {
-                float alpha = 0.5f;
-                Frame* curr = f;
-                for(int j = 0; j < params.onionBefore; j++) {
-                    strokeShader.setVec4("uColor", glm::vec4(1.0f, 0.0f, 0.8f, alpha));
-                    alpha = 0.5 * alpha + 0.025;
-                    curr = l->getFrameAt(params.proj, curr->begin - 1);
-                    if(curr == NULL)
-                        break;
-                    renderFrame(params.proj, curr, true);
-                }
-                alpha = 0.5f;
-                curr = f;
-                for(int j = 0; j < params.onionAfter; j++) {
-                    strokeShader.setVec4("uColor", glm::vec4(0.0f, 0.8f, 1.0f, alpha));
-                    alpha = 0.5 * alpha + 0.025;
-                    curr = l->getFrameAfter(params.proj, curr->begin);
-                    if(curr == NULL)
-                        break;
-                    renderFrame(params.proj, curr, true);        
-                }
+            float alpha = 0.5f;
+            Frame* curr = l->getFrameAt(params.proj, params.frame - 1);
+            for(int j = 0; j < params.onionBefore; j++) {
+                if(curr == NULL)
+                    break;
+                strokeShader.setVec4("uColor", glm::vec4(1.0f, 0.0f, 0.8f, alpha));
+                alpha = 0.5 * alpha + 0.025;
+                renderFrame(params.proj, curr, true);
+                curr = l->getFrameAt(params.proj, curr->begin - 1);
+            }
+            alpha = 0.5f;
+            curr = l->getFrameAfter(params.proj, params.frame);
+            for(int j = 0; j < params.onionAfter; j++) {
+                if(curr == NULL)
+                    break;
+                strokeShader.setVec4("uColor", glm::vec4(0.0f, 0.8f, 1.0f, alpha));
+                alpha = 0.5 * alpha + 0.025;
+                renderFrame(params.proj, curr, true);        
+                curr = l->getFrameAfter(params.proj, curr->begin);
             }
         }
 
