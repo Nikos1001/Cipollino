@@ -101,6 +101,9 @@ EM_BOOL socketMsgCallback(int eventType, const EmscriptenWebSocketMessageEvent* 
 }
 
 bool Socket::init(const char* url) {
+	if(strlen(url) < 6 || memcmp(url, "wss://", 6) != 0)
+		return false;
+	
 	EmscriptenWebSocketCreateAttributes attribs;
 	attribs.url = url;
 	attribs.createOnMainThread = true;
