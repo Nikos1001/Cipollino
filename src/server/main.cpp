@@ -9,24 +9,20 @@
 int main() {
     printf("Hello from the server!\n");
 
+    mkdir("proj.cipollino", S_IRWXU | S_IRWXG | S_IRWXO);
+
     Project proj;
-    proj.fps = 24;
     proj.init();
-    Name gfxName;
-    gfxName.init("Graphic");
-    proj.addGraphic(1, 100, gfxName);
-    Name name;
-    name.init("Layer");
-    proj.addLayer(2, 1, name, NULL);
+
+    KeySmith keys;
+    keys.init(proj.load("proj.cipollino"));
+    printf("%d\n", proj.fps);
     
     Server server;
     if(!server.init(2000)) {
         printf("Server failed to initialize.\n");
         return 1;
     }
-
-    KeySmith keys;
-    keys.init(1000);
 
     while(true) {
         SocketMsg msg = server.nextMsg();
@@ -62,6 +58,8 @@ int main() {
             keys.handleKeyRequest(&msg);
         }
         msg.free();
+
+        proj.save("proj.cipollino", keys.curr);
     }
 
     return 0;

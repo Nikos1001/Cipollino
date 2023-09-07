@@ -13,6 +13,12 @@ uint32_t Name::len() {
     return strlen(str);
 }
 
+Name makeName(const char* str) {
+    Name n;
+    n.init(str);
+    return n;
+}
+
 bool littleEndian() {
     unsigned int x = 1;
     char* c = (char*)&x;

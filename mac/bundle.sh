@@ -6,7 +6,7 @@ mkdir mac-build
 cd mac-build
 mkdir build
 cd build
-cmake ../.. -DCMAKE_OSX_SYSROOT=$1 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DCMAKE_BUILD_TYPE=Release
+cmake ../.. -DCMAKE_OSX_SYSROOT=$1 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 --config Release
 make
 cd ..
 mkdir Cipollino.app

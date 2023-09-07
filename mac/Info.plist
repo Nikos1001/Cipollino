@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>LSMinimumSystemVersion</key>
-	<string>11.0.0</string>
+    <string>11.0.0</string>
     <key>CFBundleExecutable</key>
 	<string>Cipollino</string>
 	<key>CFBundleIconFile</key>
@@ -16,5 +16,19 @@
 	<string>NSApplication</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+    <array>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>cipollino</string>
+				<string>cipData</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>icon.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>Cipollino File</string>
+			<true/>
+		</dict>
+	</array>
 </dict>
 </plist>

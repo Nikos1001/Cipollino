@@ -60,7 +60,7 @@ void SceneRenderer::render(SceneRenderParams params) {
             Layer* l = params.proj->getLayer(g->layers[i]);
             Frame* f = l->getFrameAt(params.proj, params.frame);
             float alpha = 0.5f;
-            Frame* curr = l->getFrameAt(params.proj, params.frame - 1);
+            Frame* curr = l->getFrameAt(params.proj, f == NULL ? params.frame - 1 : f->begin - 1);
             for(int j = 0; j < params.onionBefore; j++) {
                 if(curr == NULL)
                     break;

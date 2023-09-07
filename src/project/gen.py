@@ -3,7 +3,7 @@
 
 proj_def = {
     'data': [
-        'uint32_t fps'
+        'uint32_t fps 24'
     ],
     'class_inject': '''
     float frameLen();
@@ -14,8 +14,8 @@ objs_def = {
     'Graphic': {
         'children': ['Layer'],
         'data': [
-            'uint32_t len',
-            'Name name'
+            'uint32_t len 100',
+            'Name name makeName("Graphic")'
         ]
     },
 
@@ -27,14 +27,14 @@ objs_def = {
     Frame* getFrameAfter(Project* proj, int t);
 ''',
         'data': [
-            'Name name'
+            'Name name makeName("Layer")'
         ]
     },
 
     'Frame': {
         'children': ['Stroke'],
         'data': [
-            'uint32_t begin'
+            'uint32_t begin UINT32_MAX'
         ],
         'class_inject': '''
     bool empty();
@@ -64,7 +64,7 @@ objs_def = {
 
     'Point': {
         'data': [
-            'glm::vec2 pt'
+            'glm::vec2 pt glm::vec2(0.0f,0.0f)'
         ]
     },
 }
@@ -79,6 +79,10 @@ typename_to_rw_name = {
     'uint32_t': 'U32',
     'glm::vec2': 'Vec2',
     'Name': 'Name'
+}
+
+typename_to_cjson_name = {
+    'uint32_t': 'Number'
 }
 
 objs = list(objs_def.keys())
@@ -124,7 +128,8 @@ def get_add_method_args(obj):
     add_args = ''
     if 'data' in objs_def[obj]:
         for field in objs_def[obj]['data']:
-            add_args += field + ', '
+            type, name, default = field.split(' ')
+            add_args += type + ' ' + name + ', '
     if parent[obj] == None:
         return 'Key key, ' + add_args
     else:
@@ -156,7 +161,8 @@ with open('gen/project.h', 'w') as f:
             f.write('\tKey ' + decap_name(parent[obj]) + ';\n')
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
-                f.write('\t' + field + ';\n')
+                type, name, default = field.split(' ')
+                f.write('\t' + type + ' ' + name + ';\n')
         if 'children' in objs_def[obj]:
             for child in objs_def[obj]['children']:
                 f.write('\tArr<Key> ' + decap_name(child) + 's;\n')
@@ -177,7 +183,8 @@ with open('gen/project.h', 'w') as f:
     f.write('\tvoid applyAddUpdate(SocketMsg* msg, Key key);\n')
     f.write('\n')
     for field in proj_def['data']:
-        f.write('\t' + field + ';\n')
+        type, name, default = field.split(' ')
+        f.write('\t' + type + ' ' + name + ';\n')
     f.write(proj_def['class_inject'])
     f.write('\n')
 
@@ -193,11 +200,16 @@ with open('gen/project.h', 'w') as f:
         
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
-                type, name = field.split(' ')
-                f.write('\tvoid set' + obj + cap_name(name) + '(Key ' + decap_name(obj) + ', ' + field + ', ProjectAction* act = NULL);\n')
+                type, name, default = field.split(' ')
+                f.write('\tvoid set' + obj + cap_name(name) + '(Key ' + decap_name(obj) + ', ' + type + ' ' + name + ', ProjectAction* act = NULL);\n')
 
         f.write('\n')
 
+    f.write('\n')
+    f.write('#ifndef __EMSCRIPTEN__\n')
+    f.write('\tvoid save(const char* path, Key lastKey);\n')
+    f.write('\tKey load(const char* path);\n')
+    f.write('#endif\n')
     f.write('\n')
     f.write('\n')
     for obj in objs:
@@ -225,6 +237,8 @@ with open('gen/project.cpp', 'w') as f:
     f.write('#include "project.h"\n')
     f.write('#include "op.h"\n')
     f.write('#include "../../protocol/protocol.h"\n')
+    f.write('#include "../../../libs/json/cJSON.h"\n')
+    f.write('#include <cstdlib>')
     f.write('\n')
 
     for obj in objs:
@@ -251,7 +265,7 @@ with open('gen/project.cpp', 'w') as f:
     f.write('\tfree();\n')
     f.write('\tinit();\n')
     for field in proj_def['data']:
-        type, name = field.split(' ')
+        type, name, default = field.split(' ')
         f.write('\t' + name + ' = msg->read' + typename_to_rw_name[type] + '();\n')
     for obj in objs:
         f.write('\tuint32_t n' + obj + ' = msg->readU32();\n')
@@ -262,7 +276,7 @@ with open('gen/project.cpp', 'w') as f:
             f.write('\t\tobj.' + decap_name(parent[obj]) + ' = msg->readKey();\n')
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
-                type, name = field.split(' ')
+                type, name, default = field.split(' ')
                 f.write('\t\tobj.' + name + ' = msg->read' + typename_to_rw_name[type] + '();\n')
         if 'children' in objs_def[obj]:
             for child in objs_def[obj]['children']:
@@ -283,7 +297,7 @@ with open('gen/project.cpp', 'w') as f:
 
     f.write('void Project::writeTo(MsgWriter* msg) {\n')
     for field in proj_def['data']:
-        type, name = field.split(' ')
+        type, name, default = field.split(' ')
         f.write('\tmsg->write' + typename_to_rw_name[type] + '(' + name + ');\n')
     for obj in objs:
         f.write('\tmsg->writeU32(' + decap_name(obj) + 's.cnt());\n')
@@ -294,7 +308,7 @@ with open('gen/project.cpp', 'w') as f:
             f.write('\t\tmsg->writeKey(obj->' + decap_name(parent[obj]) + ');\n')
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
-                type, name = field.split(' ')
+                type, name, default = field.split(' ')
                 f.write('\t\tmsg->write' + typename_to_rw_name[type] + '(obj->' + name + ');\n')
         if 'children' in objs_def[obj]:
             for child in objs_def[obj]['children']:
@@ -333,7 +347,7 @@ with open('gen/project.cpp', 'w') as f:
         if 'data' in objs_def[obj]:
             for i in range(len(objs_def[obj]['data'])):
                 field = objs_def[obj]['data'][i]
-                type, name = field.split(' ')
+                type, name, default = field.split(' ')
                 f.write('\t\t\tif(fieldIdx == ' + str(i) + ')\n')
                 f.write('\t\t\t\tset' + obj + cap_name(name) + '(key, msg->read' + typename_to_rw_name[type] + '());\n')
         f.write('\t\t}\n')
@@ -352,14 +366,14 @@ with open('gen/project.cpp', 'w') as f:
             f.write('\t\t\treturn;\n')
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
-                type, name = field.split(' ')
+                type, name, default = field.split(' ')
                 f.write('\t\t' + type + ' ' + name + ' = msg->read' + typename_to_rw_name[type] + '();\n') 
         add_line = '\t\tadd' + obj + '(key'
         if parent[obj] != None:
             add_line += ', parent->key'
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
-                type, name = field.split(' ')
+                type, name, default = field.split(' ')
                 add_line += ', ' + name
         f.write(add_line + ');\n')
         f.write('\t}\n')
@@ -388,7 +402,7 @@ with open('gen/project.cpp', 'w') as f:
             f.write('\tdata->parent = obj->' + decap_name(parent[obj]) + ';\n')
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
-                type, name = field.split(' ')
+                type, name, default = field.split(' ')
                 f.write('\tdata->' + name + ' = obj->' + name + ';\n') 
         if 'children' in objs_def[obj]:
             for child in objs_def[obj]['children']:
@@ -425,7 +439,7 @@ with open('gen/project.cpp', 'w') as f:
         f.write('\tobj.init(key);\n')
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
-                type, name = field.split(' ')
+                type, name, default = field.split(' ')
                 f.write('\tobj.' + name + ' = ' + name + ';\n')
         if parent[obj] != None:
             f.write('\tobj.' + decap_name(parent[obj]) + ' = parent->key;\n')
@@ -517,8 +531,8 @@ with open('gen/project.cpp', 'w') as f:
         if 'data' in objs_def[obj]:
             for i in range(len(objs_def[obj]['data'])): 
                 field = objs_def[obj]['data'][i]
-                type, name = field.split(' ')
-                f.write('void Project::set' + obj + cap_name(name) + '(Key key, ' + field + ', ProjectAction* act) {\n')
+                type, name, default = field.split(' ')
+                f.write('void Project::set' + obj + cap_name(name) + '(Key key, ' + type + ' ' + name + ', ProjectAction* act) {\n')
                 f.write('\t' + obj + '* obj = get' + obj + '(key);\n')
                 f.write('\tif(obj == NULL)\n')
                 f.write('\t\treturn;\n')
@@ -545,6 +559,204 @@ with open('gen/project.cpp', 'w') as f:
                 f.write('}\n')
                 f.write('\n')
 
+    def write_set_json_field(obj_name, type, name, val, indent):
+        if type == 'uint32_t':
+            f.write('\t' * indent + 'cJSON_AddNumberToObject(' + obj_name + ', "' + name + '", ' + val + ');\n')
+        elif type == 'glm::vec2':
+            f.write('\t' * indent + 'cJSON* vec = cJSON_AddArrayToObject(' + obj_name + ', "' + name + '");\n')
+            f.write('\t' * indent + 'cJSON_AddItemToArray(vec, cJSON_CreateNumber(' + val + '.x));\n')
+            f.write('\t' * indent + 'cJSON_AddItemToArray(vec, cJSON_CreateNumber(' + val + '.y));\n')
+        elif type == 'Name':
+            f.write('\t' * indent + 'cJSON_AddItemToObject(' + obj_name + ', "' + name + '", cJSON_CreateString(' + val + '.str));\n')
+        else:
+            raise Exception('Unimplemented type ' + type)
+
+    f.write('static void saveJSONFile(const char* root, const char* file, cJSON* data) {\n')
+    f.write('\tchar pathBuf[1024];\n')
+    f.write('\tsnprintf(pathBuf, 1024, "%s/%s.cipData", root, file);\n')
+    f.write('\tFILE* f = fopen(pathBuf, "w");\n')
+    f.write('\tconst char* dataStr = cJSON_PrintUnformatted(data);\n')
+    f.write('\tfprintf(f, "%s", dataStr);\n')
+    f.write('\tstd::free((void*)dataStr);\n')
+    f.write('\tcJSON_Delete(data);\n')
+    f.write('\tfclose(f);\n')
+    f.write('}\n')
+    f.write('\n')
+
+    for obj in objs[::-1]:
+        f.write('static cJSON* generate' + obj + 'Data(Project* proj, ' + obj + '* obj) {\n')
+        f.write('\tcJSON* data = cJSON_CreateObject();\n')
+        f.write('\tchar keyBuf[512];\n')
+        f.write('\tsnprintf(keyBuf, 512, "%llu", obj->key);\n')
+        f.write('\tcJSON_AddItemToObject(data, "key", cJSON_CreateString(keyBuf));\n')
+        if 'data' in objs_def[obj]:
+            for field in objs_def[obj]['data']:
+                type, name, default = field.split(' ')
+                write_set_json_field('data', type, name, 'obj->' + name, 1)
+        if 'children' in objs_def[obj]:
+            for child in objs_def[obj]['children']:
+                f.write('\tcJSON* ' + decap_name(child) + 'sList = cJSON_AddArrayToObject(data, "' + decap_name(child) + 's");\n')
+                f.write('\tfor(int i = 0; i < obj->' + decap_name(child) + 's.cnt(); i++) {\n')
+                f.write('\t\tcJSON* data = generate' + child + 'Data(proj, proj->get' + child + '(obj->' + decap_name(child) + 's[i]));\n')
+                f.write('\t\tcJSON_AddItemToArray(' + decap_name(child) + 'sList, data);\n')
+                f.write('\t}\n')
+        f.write('\treturn data;\n')
+        f.write('}\n')
+        f.write('\n')
+
+    f.write('void Project::save(const char* path, Key lastKey) {\n')
+    f.write('\tcJSON* proj = cJSON_CreateObject();\n')
+    for field in proj_def['data']:
+        type, name, default = field.split(' ')
+        write_set_json_field('proj', type, name, name, 1)
+    for obj in objs:
+        if parent[obj] == None:
+            f.write('\tcJSON* ' + decap_name(obj) + 'sList = cJSON_AddArrayToObject(proj, "' + decap_name(obj) + 's");\n')
+            f.write('\tfor(int i = 0; i < ' + decap_name(obj) + 's.cnt(); i++) {\n')
+            f.write('\t\tchar buf[512];\n')
+            f.write('\t\tsnprintf(buf, 512, "%llu", ' + decap_name(obj) + 's[i].key);\n')
+            f.write('\t\tcJSON* key = cJSON_CreateString(buf);\n')
+            f.write('\t\tcJSON_AddItemToArray(' + decap_name(obj) + 'sList, key);\n')
+            f.write('\t}\n')
+    f.write('\tchar lastKeyBuf[512];\n')
+    f.write('\tsnprintf(lastKeyBuf, 512, "%llu", lastKey);\n')
+    f.write('\tcJSON_AddItemToObject(proj, "lastKey", cJSON_CreateString(lastKeyBuf));\n')
+    f.write('\tsaveJSONFile(path, "proj", proj);')
+    for obj in objs:
+        if parent[obj] == None:
+            f.write('\tfor(int i = 0; i < ' + decap_name(obj) + 's.cnt(); i++) {\n')
+            f.write('\t\tcJSON* data = generate' + obj + 'Data(this, &' + decap_name(obj) + 's[i]);\n')
+            f.write('\t\tchar buf[512];\n')
+            f.write('\t\tsnprintf(buf, 512, "%llu", ' + decap_name(obj) + 's[i].key);\n')
+            f.write('\t\tsaveJSONFile(path, buf, data);\n')
+            f.write('\t}\n')
+    f.write('}\n')
+    f.write('\n')
+
+
+    f.write('cJSON* loadJSONFile(const char* root, const char* file) {\n')
+    f.write('\tchar pathBuf[1024];\n')
+    f.write('\tsnprintf(pathBuf, 1024, "%s/%s.cipData", root, file);\n')
+    f.write('\tFILE* f = fopen(pathBuf, "r");\n')
+    f.write('\tif(f == NULL)\n')
+    f.write('\t\treturn cJSON_CreateObject();\n')
+    f.write('\tfseek(f, 0L, SEEK_END);\n')
+    f.write('\tsize_t size = ftell(f);\n')
+    f.write('\trewind(f);\n')
+    f.write('\tchar* buf = (char*)std::malloc(size + 1);\n')
+    f.write('\tfread(buf, sizeof(char), size, f);\n')
+    f.write('\tbuf[size] = \'\\0\';\n')
+    f.write('\tfclose(f);\n');
+    f.write('\tcJSON* res = cJSON_Parse(buf);\n')
+    f.write('\tstd::free(buf);\n')
+    f.write('\tif(res == NULL)\n')
+    f.write('\t\treturn cJSON_CreateObject();\n')
+    f.write('\treturn res;\n')
+    f.write('}\n')
+    f.write('\n')
+    
+    def write_get_json_field(obj_name, name, type, var, indent):
+        f.write('\t' * indent + 'do {\n')
+        f.write('\t' * indent + '\tcJSON* field = cJSON_GetObjectItem(' + obj_name + ', "' + name + '");\n')
+        f.write('\t' * indent + '\tif(field != NULL) {\n')
+        if type == 'uint32_t':
+            f.write('\t' * indent + '\t\tif(cJSON_IsNumber(field))\n')
+            f.write('\t' * indent + '\t\t\t' + var + ' = field->valuedouble;\n')
+        elif type == 'glm::vec2':
+            f.write('\t' * indent + '\t\tif(cJSON_IsArray(field)) {\n')
+            f.write('\t' * indent + '\t\t\tcJSON* elem;\n')
+            f.write('\t' * indent + '\t\t\tint i = 0;\n')
+            f.write('\t' * indent + '\t\t\tcJSON_ArrayForEach(elem, field) {\n')
+            f.write('\t' * indent + '\t\t\t\tif(i == 0 && cJSON_IsNumber(elem))\n')
+            f.write('\t' * indent + '\t\t\t\t\t' + var + '.x = elem->valuedouble;\n')
+            f.write('\t' * indent + '\t\t\t\tif(i == 1 && cJSON_IsNumber(elem))\n')
+            f.write('\t' * indent + '\t\t\t\t\t' + var + '.y = elem->valuedouble;\n')
+            f.write('\t' * indent + '\t\t\t\ti++;\n')
+            f.write('\t' * indent + '\t\t\t}\n')
+            f.write('\t' * indent + '\t\t}\n')
+        elif type == 'Name':
+            f.write('\t' * indent + '\t\tif(cJSON_IsString(field))\n')
+            f.write('\t' * indent + '\t\t\t' + var + '.init(cJSON_GetStringValue(field));\n')
+        else:
+            raise Exception('Unimplemented type ' + type)
+        f.write('\t' * indent + '\t}\n')
+        f.write('\t' * indent + '} while(0);\n')
+
+    f.write('Key jsonToKey(cJSON* json) {\n')
+    f.write('\tif(json == NULL)\n')
+    f.write('\t\treturn NULL_KEY;\n')
+    f.write('\tif(!cJSON_IsString(json))\n')
+    f.write('\t\treturn NULL_KEY;\n')
+    f.write('\tconst char* str = cJSON_GetStringValue(json);\n')
+    f.write('\tKey res = 0;\n')
+    f.write('\twhile(*str != \'\\0\') {\n')
+    f.write('\t\tif(*str < \'0\' && *str > \'9\')\n')
+    f.write('\t\t\treturn NULL_KEY;\n')
+    f.write('\t\tres *= 10;\n')
+    f.write('\t\tres += *str - \'0\';\n')
+    f.write('\t\tstr++;\n')
+    f.write('\t}\n')
+    f.write('\treturn res;\n')
+    f.write('}\n')
+    f.write('\n')
+
+    for obj in objs[::-1]:
+        f.write('static void load' + obj + '(Project* proj, cJSON* data, Key parent = NULL_KEY) {\n')
+        f.write('\tif(data == NULL || !cJSON_IsObject(data))\n')
+        f.write('\t\treturn;\n')
+        f.write('\tKey key = jsonToKey(cJSON_GetObjectItem(data, "key"));\n')
+        f.write('\tif(key == NULL_KEY)\n')
+        f.write('\t\treturn;\n')
+        add_line = '\tproj->add' + obj + '(key'
+        if parent[obj] != None:
+            add_line += ', parent'
+        if 'data' in objs_def[obj]:
+            for field in objs_def[obj]['data']:
+                type, name, default = field.split(' ')
+                f.write('\t' + type + ' ' + name + ' = ' + default + ';\n')
+                write_get_json_field('data', name, type, name, 1)
+                add_line += ', ' + name
+        add_line += ');\n'
+        f.write(add_line)
+        if 'children' in objs_def[obj]:
+            for child in objs_def[obj]['children']:
+                f.write('\tcJSON* ' + decap_name(child) + 's = cJSON_GetObjectItem(data, "' + decap_name(child) + 's");\n')
+                f.write('\tif(' + decap_name(child) + 's != NULL && cJSON_IsArray(' + decap_name(child) + 's)) {\n')
+                f.write('\t\tcJSON* childData;\n')
+                f.write('\t\tcJSON_ArrayForEach(childData, ' + decap_name(child) + 's) {\n')
+                f.write('\t\t\tload' + child + '(proj, childData, key);\n')
+                f.write('\t\t}\n')
+                f.write('\t}\n')
+        f.write('}\n')
+        f.write('\n')
+
+    f.write('Key Project::load(const char* path) {\n')
+    f.write('\tfree();\n')
+    f.write('\tinit();\n')
+    f.write('\tcJSON* projData = loadJSONFile(path, "proj");\n')
+    for field in proj_def['data']:
+        type, name, default = field.split(' ')
+        f.write('\t' + name + ' = ' + default + ';\n')
+        write_get_json_field('projData', name, type, name, 1)
+    for obj in objs:
+        if parent[obj] == None:
+            f.write('\tcJSON* ' + decap_name(obj) + 's = cJSON_GetObjectItem(projData, "' + decap_name(obj) + 's");\n')
+            f.write('\tif(' + decap_name(obj) + 's != NULL && cJSON_IsArray(' + decap_name(obj) + 's' + ')) {\n')
+            f.write('\t\tcJSON* keyJSON;\n')
+            f.write('\t\tcJSON_ArrayForEach(keyJSON, ' + decap_name(obj) + 's) {\n')
+            f.write('\t\t\tKey key = jsonToKey(keyJSON);\n')
+            f.write('\t\t\tif(key != NULL_KEY) {\n')
+            f.write('\t\t\t\tcJSON* data = loadJSONFile(path, cJSON_GetStringValue(keyJSON));\n')
+            f.write('\t\t\t\tload' + obj + '(this, data);\n')
+            f.write('\t\t\t\tcJSON_Delete(data);\n')
+            f.write('\t\t\t}\n')
+            f.write('\t\t}\n')
+            f.write('\t}\n')
+    f.write('\tKey res = jsonToKey(cJSON_GetObjectItem(projData, "lastKey"));\n')
+    f.write('\tcJSON_Delete(projData);\n')
+    f.write('\treturn res;\n')
+    f.write('}\n')
+
 with open('gen/op.h', 'w') as f:
     f.write('\n')
     f.write('#ifndef OP_GEN_H\n')
@@ -557,7 +769,8 @@ with open('gen/op.h', 'w') as f:
             f.write('\tKey parent;\n')
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
-                f.write('\t' + field + ';\n')
+                type, name, data = field.split(' ')
+                f.write('\t' + type + ' ' + name + ';\n')
         if 'children' in objs_def[obj]:
             for child in objs_def[obj]['children']:
                 f.write('\tArr<' + child + 'AddData> ' + decap_name(child) + 's;\n')
@@ -599,7 +812,7 @@ with open('gen/op.cpp', 'w') as f:
             f.write('\t\tif(objType == ' + str(obj_idx[obj]) + ') {\n')
             for i in range(len(objs_def[obj]['data'])):
                 field = objs_def[obj]['data'][i]
-                type, name = field.split(' ') 
+                type, name, default = field.split(' ') 
                 f.write('\t\t\tif(fieldIdx == ' + str(i) + ') {\n')
                 f.write('\t\t\t\tanim::free(oldData, sizeof(' + type + '));\n')
                 f.write('\t\t\t\tanim::free(newData, sizeof(' + type + '));\n')
@@ -623,7 +836,7 @@ with open('gen/op.cpp', 'w') as f:
             f.write('\t\t\tmsg.writeKey(addData->parent);\n')
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
-                type, name = field.split(' ')
+                type, name, default = field.split(' ')
                 f.write('\t\t\tmsg.write' + typename_to_rw_name[type] + '(addData->' + name + ');\n')
         f.write('\t\t}\n')
     f.write('\t\tmsgs->add(msg);\n')
@@ -650,7 +863,7 @@ with open('gen/op.cpp', 'w') as f:
             f.write('\t\tif(objType == ' + str(obj_idx[obj]) + ') {\n')
             for i in range(len(objs_def[obj]['data'])):
                 field = objs_def[obj]['data'][i]
-                type, name = field.split(' ')
+                type, name, default = field.split(' ')
                 f.write('\t\t\tif(fieldIdx == ' + str(i) + ')\n')
                 f.write('\t\t\t\tmsg.write' + typename_to_rw_name[type] + '(*((' + type + '*)newData));\n')
             f.write('\t\t}\n')
@@ -669,7 +882,7 @@ with open('gen/op.cpp', 'w') as f:
             f.write('\t' * indent + 'msg.writeKey(' + add_data_name + '->parent);\n')
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
-                type, name = field.split(' ')
+                type, name, default = field.split(' ')
                 f.write('\t' * indent + 'msg.write' + typename_to_rw_name[type] + '(' + add_data_name + '->' + name + ');\n')
         f.write('\t' * indent + 'msgs->add(msg);\n')
         if 'children' in objs_def[obj]:
@@ -708,7 +921,7 @@ with open('gen/op.cpp', 'w') as f:
             f.write('\t\tif(objType == ' + str(obj_idx[obj]) + ') {\n')
             for i in range(len(objs_def[obj]['data'])):
                 field = objs_def[obj]['data'][i]
-                type, name = field.split(' ')
+                type, name, default = field.split(' ')
                 f.write('\t\t\tif(fieldIdx == ' + str(i) + ')\n')
                 f.write('\t\t\t\tmsg.write' + typename_to_rw_name[type] + '(*((' + type + '*)oldData));\n')
             f.write('\t\t}\n')
@@ -741,7 +954,7 @@ with open('../client/gen/action.cpp', 'w') as f:
             add_line += ', ' + add_data_name + '->parent' 
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
-                type, name = field.split(' ')
+                type, name, default = field.split(' ')
                 add_line += ', ' + add_data_name + '->' + name
         add_line += ');\n'
         f.write(add_line)
@@ -765,7 +978,7 @@ with open('../client/gen/action.cpp', 'w') as f:
             f.write('\t\t\tif(ops[i].objType == ' + str(obj_idx[obj]) + ') {\n')
             for i in range(len(objs_def[obj]['data'])):
                 field = objs_def[obj]['data'][i]
-                type, name = field.split(' ')
+                type, name, default = field.split(' ')
                 f.write('\t\t\t\tif(ops[i].fieldIdx == ' + str(i) + ') {\n')
                 f.write('\t\t\t\t\teditor->proj.set' + obj + cap_name(name) + '(ops[i].key, *((' + type + '*)ops[i].oldData));\n')
                 f.write('\t\t\t\t}\n')
@@ -794,7 +1007,7 @@ with open('../client/gen/action.cpp', 'w') as f:
             add_line += ', data->parent'
         if 'data' in objs_def[obj]:
             for field in objs_def[obj]['data']:
-                type, name = field.split(' ')
+                type, name, default = field.split(' ')
                 add_line += ', data->' + name
         add_line += ');\n'
         f.write(add_line)
@@ -812,7 +1025,7 @@ with open('../client/gen/action.cpp', 'w') as f:
             f.write('\t\t\tif(ops[i].objType == ' + str(obj_idx[obj]) + ') {\n')
             for i in range(len(objs_def[obj]['data'])):
                 field = objs_def[obj]['data'][i]
-                type, name = field.split(' ')
+                type, name, default = field.split(' ')
                 f.write('\t\t\t\tif(ops[i].fieldIdx == ' + str(i) + ') {\n')
                 f.write('\t\t\t\t\teditor->proj.set' + obj + cap_name(name) + '(ops[i].key, *((' + type + '*)ops[i].newData));\n')
                 f.write('\t\t\t\t}\n')

@@ -40,7 +40,7 @@ set(CLIENT_SOURCES
 if(DEFINED EMSCRIPTEN)
     set(CLIENT_SOURCES ${CLIENT_SOURCES} src/platform/web.cpp)
 else()
-    set(CLIENT_SOURCES ${CLIENT_SOURCES} src/platform/desktop.cpp)
+    set(CLIENT_SOURCES ${CLIENT_SOURCES} src/platform/desktop.cpp libs/json/cJSON.c)
 endif()
 
 add_executable(anim_client ${CLIENT_SOURCES})
@@ -71,6 +71,7 @@ project(anim_server)
 add_executable(anim_server
     src/server/main.cpp
     src/server/server.cpp src/server/keysmith.cpp
+    libs/json/cJSON.c
     ${COMMON_SOURCES})
 
 target_include_directories(anim_server PRIVATE libs/websock)

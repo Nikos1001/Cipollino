@@ -37,7 +37,6 @@ class KeySmith {
 public:
     void init(Key first);
     void handleKeyRequest(SocketMsg* msg);
-private:
     Key curr;
 };
 

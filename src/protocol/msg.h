@@ -20,6 +20,8 @@ public:
     char str[NAME_BUF_SIZE];
 };
 
+Name makeName(const char* str);
+
 class SocketMsg {
 public:
     void init();
