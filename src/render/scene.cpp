@@ -36,7 +36,7 @@ void SceneRenderer::renderFrame(Project* proj, Frame* f, bool onionSkin) {
     for(int i = 0; i < f->strokes.cnt(); i++) {
         Stroke* s = proj->getStroke(f->strokes[i]);
         if(!onionSkin)
-            strokeShader.setVec4("uColor", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+            strokeShader.setVec4("uColor", s->color);
         if(s != NULL)
             s->mesh.render();
     }

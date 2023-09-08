@@ -9,12 +9,15 @@
 #include "panels/asset.h"
 #include "panels/timeline.h"
 #include "panels/debug.h"
+#include "panels/toolbar.h"
 
 bool Panel::render(Editor* editor, float dt) {
     char nameBuf[256];
     const char* name = this->getName();
     snprintf(nameBuf, sizeof(nameBuf), "%s##%d", name, key);
     bool winOpen = true;
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowMinSize = minSize;
     ImGui::Begin(nameBuf, &winOpen);
     tick(editor, dt);
     ImGui::End();

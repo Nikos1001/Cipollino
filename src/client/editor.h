@@ -33,6 +33,8 @@ public:
     Pencil pencil;
     Tool* currTool;
 
+    glm::vec4 strokeCol;
+
     Key openGraphic;
     int activeLayer;
 

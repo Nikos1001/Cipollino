@@ -27,7 +27,7 @@ void Pencil::mouseClick(Editor* editor, glm::vec2 pos) {
     }
 
     Key k = editor->keys.nextKey();
-    editor->proj.addStroke(k, frameKey, &act);
+    editor->proj.addStroke(k, frameKey, editor->strokeCol, &act);
     currStroke = k; 
 
     Key ptKey = editor->keys.nextKey();

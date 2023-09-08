@@ -106,6 +106,14 @@ glm::vec2 SocketMsg::readVec2() {
     return glm::vec2(x, y);
 }
 
+glm::vec4 SocketMsg::readVec4() {
+    float x = readFloat();
+    float y = readFloat();
+    float z = readFloat();
+    float w = readFloat();
+    return glm::vec4(x, y, z, w);
+}
+
 
 
 void MsgWriter::init() {
@@ -180,4 +188,11 @@ void MsgWriter::writeName(Name name) {
 void MsgWriter::writeVec2(glm::vec2 vec) {
     writeFloat(vec.x);
     writeFloat(vec.y);
+}
+
+void MsgWriter::writeVec4(glm::vec4 vec) {
+    writeFloat(vec.x);
+    writeFloat(vec.y);
+    writeFloat(vec.z);
+    writeFloat(vec.w);
 }

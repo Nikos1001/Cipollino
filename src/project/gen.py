@@ -59,7 +59,10 @@ objs_def = {
     mesh.free();
 #endif
 ''',
-        'update_inject': 'stroke_->updateMesh(this);' 
+        'update_inject': 'stroke_->updateMesh(this);',
+        'data': [
+            'glm::vec4 color glm::vec4(0.0f,0.0f,0.0f,1.0f)'
+        ] 
     },
 
     'Point': {
@@ -78,6 +81,7 @@ os.chdir('/'.join(path_to_script.split('/')[0:-1]))
 typename_to_rw_name = {
     'uint32_t': 'U32',
     'glm::vec2': 'Vec2',
+    'glm::vec4': 'Vec4',
     'Name': 'Name'
 }
 
@@ -566,6 +570,12 @@ with open('gen/project.cpp', 'w') as f:
             f.write('\t' * indent + 'cJSON* vec = cJSON_AddArrayToObject(' + obj_name + ', "' + name + '");\n')
             f.write('\t' * indent + 'cJSON_AddItemToArray(vec, cJSON_CreateNumber(' + val + '.x));\n')
             f.write('\t' * indent + 'cJSON_AddItemToArray(vec, cJSON_CreateNumber(' + val + '.y));\n')
+        elif type == 'glm::vec4':
+            f.write('\t' * indent + 'cJSON* vec = cJSON_AddArrayToObject(' + obj_name + ', "' + name + '");\n')
+            f.write('\t' * indent + 'cJSON_AddItemToArray(vec, cJSON_CreateNumber(' + val + '.x));\n')
+            f.write('\t' * indent + 'cJSON_AddItemToArray(vec, cJSON_CreateNumber(' + val + '.y));\n')
+            f.write('\t' * indent + 'cJSON_AddItemToArray(vec, cJSON_CreateNumber(' + val + '.z));\n')
+            f.write('\t' * indent + 'cJSON_AddItemToArray(vec, cJSON_CreateNumber(' + val + '.w));\n')
         elif type == 'Name':
             f.write('\t' * indent + 'cJSON_AddItemToObject(' + obj_name + ', "' + name + '", cJSON_CreateString(' + val + '.str));\n')
         else:
@@ -671,6 +681,22 @@ with open('gen/project.cpp', 'w') as f:
             f.write('\t' * indent + '\t\t\t\t\t' + var + '.x = elem->valuedouble;\n')
             f.write('\t' * indent + '\t\t\t\tif(i == 1 && cJSON_IsNumber(elem))\n')
             f.write('\t' * indent + '\t\t\t\t\t' + var + '.y = elem->valuedouble;\n')
+            f.write('\t' * indent + '\t\t\t\ti++;\n')
+            f.write('\t' * indent + '\t\t\t}\n')
+            f.write('\t' * indent + '\t\t}\n')
+        elif type == 'glm::vec4':
+            f.write('\t' * indent + '\t\tif(cJSON_IsArray(field)) {\n')
+            f.write('\t' * indent + '\t\t\tcJSON* elem;\n')
+            f.write('\t' * indent + '\t\t\tint i = 0;\n')
+            f.write('\t' * indent + '\t\t\tcJSON_ArrayForEach(elem, field) {\n')
+            f.write('\t' * indent + '\t\t\t\tif(i == 0 && cJSON_IsNumber(elem))\n')
+            f.write('\t' * indent + '\t\t\t\t\t' + var + '.x = elem->valuedouble;\n')
+            f.write('\t' * indent + '\t\t\t\tif(i == 1 && cJSON_IsNumber(elem))\n')
+            f.write('\t' * indent + '\t\t\t\t\t' + var + '.y = elem->valuedouble;\n')
+            f.write('\t' * indent + '\t\t\t\tif(i == 2 && cJSON_IsNumber(elem))\n')
+            f.write('\t' * indent + '\t\t\t\t\t' + var + '.z = elem->valuedouble;\n')
+            f.write('\t' * indent + '\t\t\t\tif(i == 3 && cJSON_IsNumber(elem))\n')
+            f.write('\t' * indent + '\t\t\t\t\t' + var + '.w = elem->valuedouble;\n')
             f.write('\t' * indent + '\t\t\t\ti++;\n')
             f.write('\t' * indent + '\t\t\t}\n')
             f.write('\t' * indent + '\t\t}\n')

@@ -38,6 +38,7 @@ public:
     Name readName();
 
     glm::vec2 readVec2();
+    glm::vec4 readVec4();
 
 #ifdef SERVER
     Client* client;
@@ -59,6 +60,7 @@ public:
     void writeName(Name name);
 
     void writeVec2(glm::vec2 vec);
+    void writeVec4(glm::vec4 vec);
 
 private:
     Arr<uint8_t> data;

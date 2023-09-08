@@ -24,6 +24,8 @@ void Editor::init(Socket* sock, App* app) {
     openGraphic = NULL_KEY;
     activeLayer = 0;
 
+    strokeCol = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
     playing = false;
     time = 0.0f;
 

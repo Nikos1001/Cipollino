@@ -12,6 +12,7 @@ class Editor;
     X(Scene, SCENE) \
     X(Assets, ASSETS) \
     X(Timeline, TIMELINE) \
+    X(Toolbar, TOOLBAR) \
     X(Debug, DEBUG)
 
 enum PanelType {
@@ -26,6 +27,7 @@ class Panel {
 public:
     virtual void init(int key) {
         this->key = key;
+        minSize = ImVec2(100, 100);
     }
 
     virtual void free() {}
@@ -35,6 +37,7 @@ public:
 
     bool render(Editor* editor, float dt);
     int key;
+    ImVec2 minSize;
 };
 
 class PanelManager {

@@ -28,7 +28,7 @@ project(anim_client)
 set(CLIENT_SOURCES
         ${COMMON_SOURCES}
         src/client/main.cpp src/client/editor.cpp src/client/tool.cpp src/client/panel.cpp
-        src/client/panels/scene.cpp src/client/panels/assets.cpp src/client/panels/timeline.cpp src/client/panels/debug.cpp
+        src/client/panels/scene.cpp src/client/panels/assets.cpp src/client/panels/timeline.cpp src/client/panels/debug.cpp src/client/panels/toolbar.cpp
         src/client/gui.cpp src/client/select.cpp
         src/client/action.cpp src/client/gen/action.cpp
         src/platform/common.cpp
