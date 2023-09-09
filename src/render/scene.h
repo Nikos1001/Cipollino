@@ -17,6 +17,8 @@ struct SceneRenderParams {
 
     int onionBefore;
     int onionAfter;
+
+    Framebuffer* picking;
 };
 
 class SceneRenderer {

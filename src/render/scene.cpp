@@ -32,30 +32,50 @@ void SceneRenderer::free() {
     strokeShader.free();
 }
 
-void SceneRenderer::renderFrame(Project* proj, Frame* f, bool onionSkin) {
+enum FrameRenderMode {
+    NORMAL,
+    ONION_SKIN,
+    PICKING 
+};
+
+void SceneRenderer::renderFrame(Project* proj, Frame* f, FrameRenderMode renderMode) {
     for(int i = 0; i < f->strokes.cnt(); i++) {
         Stroke* s = proj->getStroke(f->strokes[i]);
-        if(!onionSkin)
-            strokeShader.setVec4("uColor", s->color);
-        if(s != NULL)
-            s->mesh.render();
+        switch(renderMode) {
+            case NORMAL: {
+                strokeShader.setVec4("uColor", s->color);
+                break;
+            }
+            case ONION_SKIN:
+                break;
+            case PICKING: {
+                int r = (i + 1) & 0xFF;
+                int g = ((i + 1) >> 8) & 0xFF;
+                int b = ((i + 1) >> 16) & 0xFF;
+                int a = ((i + 1) >> 24) & 0xFF;
+                glm::vec4 color = glm::vec4((float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, (float)a / 255.0f);
+                strokeShader.setVec4("uColor", color);
+            }
+        }
+        s->mesh.render();
     }
 }
 
 void SceneRenderer::render(SceneRenderParams params) {
-    params.fb->resize(params.w, params.h);
-    params.fb->renderTo();
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    float aspect = (float)params.w / (float)params.h;
+        float aspect = (float)params.w / (float)params.h;
     strokeShader.use();
     glm::mat4 trans = params.cam->projView(aspect); 
     strokeShader.setMat4("uTrans", trans);
     
     Graphic* g = params.proj->getGraphic(params.graphicKey);
     if(g != NULL) {
+        params.fb->resize(params.w, params.h);
+        params.fb->renderTo();
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
         for(int i = 0; i < g->layers.cnt(); i++) {
             Layer* l = params.proj->getLayer(g->layers[i]);
             Frame* f = l->getFrameAt(params.proj, params.frame);
@@ -76,7 +96,7 @@ void SceneRenderer::render(SceneRenderParams params) {
                     break;
                 strokeShader.setVec4("uColor", glm::vec4(0.0f, 0.8f, 1.0f, alpha));
                 alpha = 0.5 * alpha + 0.025;
-                renderFrame(params.proj, curr, true);        
+                renderFrame(params.proj, curr, NORMAL);        
                 curr = l->getFrameAfter(params.proj, curr->begin);
             }
         }
@@ -86,7 +106,22 @@ void SceneRenderer::render(SceneRenderParams params) {
             Layer* l = params.proj->getLayer(g->layers[i]);
             Frame* f = l->getFrameAt(params.proj, params.frame);
             if(f != NULL) {
-                renderFrame(params.proj, f, false);        
+                renderFrame(params.proj, f, ONION_SKIN);        
+            }
+        }
+
+        if(params.picking != NULL) {
+            params.picking->resize(params.w, params.h);
+            params.picking->renderTo();
+            glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            glDisable(GL_BLEND);
+            for(int i = 0; i < g->layers.cnt(); i++) {
+                Layer* l = params.proj->getLayer(g->layers[i]);
+                Frame* f = l->getFrameAt(params.proj, params.frame);
+                if(f != NULL) {
+                    renderFrame(params.proj, f, PICKING);
+                }
             }
         }
     }
